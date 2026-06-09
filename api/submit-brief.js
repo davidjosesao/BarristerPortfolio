@@ -8,6 +8,7 @@ const REQUIRED_FIELDS = ['yourName', 'yourEmail', 'parties', 'court', 'jurisdict
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateBody(body) {
+  if (!body || typeof body !== 'object') return { error: 'Invalid request body', field: null };
   for (const key of Object.keys(body)) {
     if (typeof body[key] === 'string') body[key] = body[key].trim();
   }
@@ -17,7 +18,7 @@ function validateBody(body) {
   if (!EMAIL_RE.test(body.yourEmail)) {
     return { error: 'yourEmail must be a valid email address', field: 'yourEmail' };
   }
-  if (body.keyFacts.length > 1000) {
+  if (typeof body.keyFacts !== 'string' || body.keyFacts.length > 1000) {
     return { error: 'keyFacts must not exceed 1000 characters', field: 'keyFacts' };
   }
   return null;

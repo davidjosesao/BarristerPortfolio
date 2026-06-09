@@ -87,4 +87,15 @@ describe('validateBody', () => {
     expect(body.yourName).toBe('Jane');
     expect(body.yourEmail).toBe('jane@example.com');
   });
+
+  test('returns error for null body', () => {
+    expect(validateBody(null)).toEqual({ error: 'Invalid request body', field: null });
+  });
+
+  test('returns error when keyFacts is not a string', () => {
+    expect(validateBody({ ...VALID_BODY, keyFacts: 12345 })).toEqual({
+      error: 'keyFacts must not exceed 1000 characters',
+      field: 'keyFacts',
+    });
+  });
 });
