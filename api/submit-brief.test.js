@@ -135,3 +135,62 @@ describe('checkRateLimit', () => {
     warn.mockRestore();
   });
 });
+
+// --- generateSummary ---
+
+const { generateSummary } = require('./submit-brief');
+
+const BRIEF_DATA = {
+  yourName: 'Jane Smith',
+  firmName: 'Smith & Co',
+  parties: 'Smith v Jones',
+  court: 'NSW Supreme Court',
+  jurisdiction: 'NSW',
+  matterType: 'Commercial',
+  hearingDate: '2026-09-15',
+  urgency: 'Standard',
+  keyFacts: 'A disputed contract.',
+};
+
+describe('generateSummary', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('returns Claude response text on success', async () => {
+    mockCreate.mockResolvedValue({ content: [{ text: '— Parties: Smith v Jones' }] });
+    const result = await generateSummary(BRIEF_DATA);
+    expect(result).toBe('— Parties: Smith v Jones');
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        temperature: 0,
+      })
+    );
+  });
+
+  test('returns fallback string when Claude API throws', async () => {
+    mockCreate.mockRejectedValue(new Error('rate limit'));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await generateSummary(BRIEF_DATA);
+    expect(result).toBe('AI summary unavailable — see full details below.');
+    errorSpy.mockRestore();
+  });
+
+  test('uses "Not set" for missing hearingDate', async () => {
+    mockCreate.mockResolvedValue({ content: [{ text: '— summary' }] });
+    const data = { ...BRIEF_DATA };
+    delete data.hearingDate;
+    await generateSummary(data);
+    const userMsg = mockCreate.mock.calls[0][0].messages[0].content;
+    expect(userMsg).toContain('Hearing date: Not set');
+  });
+
+  test('omits firm name from user message when not provided', async () => {
+    mockCreate.mockResolvedValue({ content: [{ text: '— summary' }] });
+    const data = { ...BRIEF_DATA };
+    delete data.firmName;
+    await generateSummary(data);
+    const userMsg = mockCreate.mock.calls[0][0].messages[0].content;
+    expect(userMsg).toContain('Submitter: Jane Smith\n');
+  });
+});
