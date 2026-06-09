@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/submit-brief.js": {
+      "maxDuration": 30
+    }
+  }
+}
