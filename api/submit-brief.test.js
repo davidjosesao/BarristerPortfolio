@@ -99,3 +99,39 @@ describe('validateBody', () => {
     });
   });
 });
+
+// --- checkRateLimit ---
+
+const { checkRateLimit } = require('./submit-brief');
+
+describe('checkRateLimit', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('returns false and sets TTL on the first request from an IP', async () => {
+    kv.incr.mockResolvedValue(1);
+    kv.expire.mockResolvedValue(null);
+    const result = await checkRateLimit('1.2.3.4');
+    expect(result).toBe(false);
+    expect(kv.incr).toHaveBeenCalledWith('ratelimit:1.2.3.4');
+    expect(kv.expire).toHaveBeenCalledWith('ratelimit:1.2.3.4', 3600);
+  });
+
+  test('returns false and skips expire when count is 2–5', async () => {
+    kv.incr.mockResolvedValue(3);
+    const result = await checkRateLimit('1.2.3.4');
+    expect(result).toBe(false);
+    expect(kv.expire).not.toHaveBeenCalled();
+  });
+
+  test('returns true when count exceeds 5', async () => {
+    kv.incr.mockResolvedValue(6);
+    expect(await checkRateLimit('1.2.3.4')).toBe(true);
+  });
+
+  test('returns false and logs a warning when KV is unavailable', async () => {
+    kv.incr.mockRejectedValue(new Error('KV connection failed'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(await checkRateLimit('1.2.3.4')).toBe(false);
+    warn.mockRestore();
+  });
+});

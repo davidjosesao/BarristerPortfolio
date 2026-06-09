@@ -24,9 +24,22 @@ function validateBody(body) {
   return null;
 }
 
+async function checkRateLimit(ip) {
+  try {
+    const key = `ratelimit:${ip}`;
+    const count = await kv.incr(key);
+    if (count === 1) await kv.expire(key, 3600);
+    return count > 5;
+  } catch (err) {
+    console.warn('Rate limit check failed (KV unavailable):', err.message);
+    return false;
+  }
+}
+
 async function handler(req, res) {
   res.status(501).end();
 }
 
 module.exports = handler;
 module.exports.validateBody = validateBody;
+module.exports.checkRateLimit = checkRateLimit;
