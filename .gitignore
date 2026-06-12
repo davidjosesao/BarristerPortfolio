@@ -1,4 +1,26 @@
+# Dependencies
 node_modules/
-.env.local
+
+# Environment variables — never commit real keys
 .env
+.env.local
+.env*.local
+.env.production
+
+# Vercel
 .vercel/
+
+# Internal design docs & specs
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
