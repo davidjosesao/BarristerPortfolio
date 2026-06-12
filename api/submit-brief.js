@@ -111,6 +111,32 @@ async function sendBarristerEmail(data, summary, timestamp) {
   await resend.emails.send(payload);
 }
 
+async function sendConfirmationEmail(data, timestamp) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  await resend.emails.send({
+    from: process.env.FROM_EMAIL,
+    to: data.yourEmail,
+    subject: 'Brief received — Michael Klooster',
+    text: `Hi ${data.yourName},
+
+Your brief submission has been received.
+
+Matter: ${data.parties}
+Submitted: ${timestamp}
+
+Michael or a member of chambers will be in touch shortly.
+
+If you need to follow up directly:
+Michael Klooster — (02) 8239 3256 · mklooster@chambers.net.au
+Chambers clerk — (02) 8239 3200 · reception@8gbc.com.au
+
+—
+8th Floor Garfield Barwick Chambers
+Level 8 · 53 Martin Place · Sydney NSW 2000
+https://www.8garfieldbarwick.com.au`,
+  });
+}
+
 async function handler(req, res) {
   res.status(501).end();
 }
@@ -120,3 +146,4 @@ module.exports.validateBody = validateBody;
 module.exports.checkRateLimit = checkRateLimit;
 module.exports.generateSummary = generateSummary;
 module.exports.sendBarristerEmail = sendBarristerEmail;
+module.exports.sendConfirmationEmail = sendConfirmationEmail;

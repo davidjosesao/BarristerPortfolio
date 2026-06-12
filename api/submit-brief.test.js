@@ -277,3 +277,62 @@ describe('sendBarristerEmail', () => {
     ).rejects.toThrow('Resend delivery failure');
   });
 });
+
+// --- sendConfirmationEmail ---
+
+const { sendConfirmationEmail } = require('./submit-brief');
+
+describe('sendConfirmationEmail', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.FROM_EMAIL = 'from@example.com';
+  });
+
+  test('sends plain-text email to the submitter with correct subject', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendConfirmationEmail(
+      { yourName: 'Jane Smith', yourEmail: 'jane@example.com', parties: 'Smith v Jones' },
+      '2026-06-09T00:00:00.000Z'
+    );
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'jane@example.com',
+        subject: 'Brief received — Michael Klooster',
+      })
+    );
+  });
+
+  test('email body contains parties, timestamp, and direct contact details', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendConfirmationEmail(
+      { yourName: 'Jane Smith', yourEmail: 'jane@example.com', parties: 'Smith v Jones' },
+      '2026-06-09T00:00:00.000Z'
+    );
+    const { text } = mockSend.mock.calls[0][0];
+    expect(text).toContain('Smith v Jones');
+    expect(text).toContain('2026-06-09T00:00:00.000Z');
+    expect(text).toContain('mklooster@chambers.net.au');
+    expect(text).toContain('reception@8gbc.com.au');
+    expect(text).toContain('53 Martin Place');
+  });
+
+  test('sends as plain text (no html property)', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendConfirmationEmail(
+      { yourName: 'Jane', yourEmail: 'jane@example.com', parties: 'A v B' },
+      '2026-06-09T00:00:00.000Z'
+    );
+    expect(mockSend.mock.calls[0][0].html).toBeUndefined();
+  });
+
+  test('throws when Resend returns an error', async () => {
+    mockSend.mockRejectedValue(new Error('Resend delivery failure'));
+    await expect(
+      sendConfirmationEmail(
+        { yourName: 'Jane', yourEmail: 'jane@example.com', parties: 'A v B' },
+        '2026-06-09T00:00:00.000Z'
+      )
+    ).rejects.toThrow('Resend delivery failure');
+  });
+});
