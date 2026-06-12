@@ -100,6 +100,48 @@ describe('validateBody', () => {
   });
 });
 
+// --- escHtml ---
+
+const { escHtml } = require('./submit-brief');
+
+describe('escHtml', () => {
+  test('escapes < > & " and single quote', () => {
+    expect(escHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    expect(escHtml("it's a test & a 'quote'")).toBe('it&#x27;s a test &amp; a &#x27;quote&#x27;');
+  });
+
+  test('leaves safe strings unchanged', () => {
+    expect(escHtml('Smith v Jones')).toBe('Smith v Jones');
+  });
+
+  test('coerces non-strings to string before escaping', () => {
+    expect(escHtml(42)).toBe('42');
+  });
+});
+
+// --- validateBody field length limits ---
+
+describe('validateBody field length limits', () => {
+  test('rejects yourName over 120 characters', () => {
+    const body = { ...VALID_BODY, yourName: 'a'.repeat(121) };
+    expect(validateBody(body)).toEqual({ error: 'yourName must not exceed 120 characters', field: 'yourName' });
+  });
+
+  test('rejects yourEmail over 254 characters', () => {
+    const body = { ...VALID_BODY, yourEmail: 'a'.repeat(249) + '@b.com' };
+    expect(validateBody(body)).toEqual({ error: 'yourEmail must not exceed 254 characters', field: 'yourEmail' });
+  });
+
+  test('rejects parties over 200 characters', () => {
+    const body = { ...VALID_BODY, parties: 'a'.repeat(201) };
+    expect(validateBody(body)).toEqual({ error: 'parties must not exceed 200 characters', field: 'parties' });
+  });
+});
+
+// --- handler security ---
+
+// (handler describe block imported below after all helpers)
+
 // --- checkRateLimit ---
 
 const { checkRateLimit } = require('./submit-brief');
@@ -449,5 +491,19 @@ describe('handler', () => {
     const res = makeRes();
     await handler(makeReq(), res);
     expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+
+  test('returns 405 for GET requests', async () => {
+    const res = makeRes();
+    await handler(makeReq({ method: 'GET' }), res);
+    expect(res._status).toBe(405);
+  });
+
+  test('HTML-escapes user input in barrister email body', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { ...makeReq().body, yourName: '<script>alert(1)</script>' } }), res);
+    const html = mockSend.mock.calls[0][0].html;
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
   });
 });

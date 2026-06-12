@@ -6,6 +6,20 @@ const { Resend } = require('resend');
 
 const REQUIRED_FIELDS = ['yourName', 'yourEmail', 'parties', 'court', 'jurisdiction', 'matterType', 'urgency', 'keyFacts'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FIELD_LIMITS = {
+  yourName: 120, yourEmail: 254, parties: 200, court: 100,
+  jurisdiction: 50, matterType: 50, urgency: 50,
+  firmName: 120, yourPhone: 30,
+};
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
 
 function validateBody(body) {
   if (!body || typeof body !== 'object') return { error: 'Invalid request body', field: null };
@@ -17,6 +31,11 @@ function validateBody(body) {
   }
   if (!EMAIL_RE.test(body.yourEmail)) {
     return { error: 'yourEmail must be a valid email address', field: 'yourEmail' };
+  }
+  for (const [field, max] of Object.entries(FIELD_LIMITS)) {
+    if (body[field] && typeof body[field] === 'string' && body[field].length > max) {
+      return { error: `${field} must not exceed ${max} characters`, field };
+    }
   }
   if (typeof body.keyFacts !== 'string' || body.keyFacts.length > 1000) {
     return { error: 'keyFacts must not exceed 1000 characters', field: 'keyFacts' };
@@ -75,25 +94,40 @@ Key facts: ${data.keyFacts}`;
 }
 
 function buildBarristerHtml(data, summary, timestamp) {
+  const name       = escHtml(data.yourName);
+  const firm       = data.firmName ? escHtml(data.firmName) : '—';
+  const email      = escHtml(data.yourEmail);
+  const phone      = data.yourPhone ? escHtml(data.yourPhone) : '—';
+  const parties    = escHtml(data.parties);
+  const court      = escHtml(data.court);
+  const juris      = escHtml(data.jurisdiction);
+  const matter     = escHtml(data.matterType);
+  const hearing    = data.hearingDate ? escHtml(data.hearingDate) : 'Not set';
+  const urgency    = escHtml(data.urgency);
+  const facts      = escHtml(data.keyFacts);
+  const ts         = escHtml(timestamp);
+  // summary comes from Claude — escape defensively in case of unexpected output
+  const safeSum    = escHtml(summary);
+
   return `<h2 style="font-family: Georgia, serif; font-size: 20px; color: #1C1C1A; margin-bottom: 4px;">New brief submission</h2>
-<p style="font-size: 13px; color: #6B6B67; margin-top: 0;">Received ${timestamp} · Submitted by ${data.yourName}</p>
+<p style="font-size: 13px; color: #6B6B67; margin-top: 0;">Received ${ts} · Submitted by ${name}</p>
 <hr style="border: none; border-top: 1px solid #D4C9A8; margin: 20px 0;">
 <h3 style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6B67;">AI Summary</h3>
-<div style="font-size: 15px; line-height: 1.7; color: #1C1C1A; white-space: pre-wrap;">${summary}</div>
+<div style="font-size: 15px; line-height: 1.7; color: #1C1C1A; white-space: pre-wrap;">${safeSum}</div>
 <hr style="border: none; border-top: 1px solid #D4C9A8; margin: 20px 0;">
 <h3 style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6B67;">Full details</h3>
 <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
-  <tr><td style="padding: 6px 0; color: #6B6B67; width: 160px;">Submitter</td><td>${data.yourName}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Firm</td><td>${data.firmName || '—'}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Email</td><td><a href="mailto:${data.yourEmail}">${data.yourEmail}</a></td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Phone</td><td>${data.yourPhone || '—'}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Parties</td><td>${data.parties}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Court</td><td>${data.court}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Jurisdiction</td><td>${data.jurisdiction}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Matter type</td><td>${data.matterType}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Hearing date</td><td>${data.hearingDate || 'Not set'}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67;">Urgency</td><td>${data.urgency}</td></tr>
-  <tr><td style="padding: 6px 0; color: #6B6B67; vertical-align: top;">Key facts</td><td style="white-space: pre-wrap;">${data.keyFacts}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67; width: 160px;">Submitter</td><td>${name}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Firm</td><td>${firm}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Phone</td><td>${phone}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Parties</td><td>${parties}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Court</td><td>${court}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Jurisdiction</td><td>${juris}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Matter type</td><td>${matter}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Hearing date</td><td>${hearing}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Urgency</td><td>${urgency}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67; vertical-align: top;">Key facts</td><td style="white-space: pre-wrap;">${facts}</td></tr>
 </table>
 <hr style="border: none; border-top: 1px solid #D4C9A8; margin: 20px 0;">
 <p style="font-size: 12px; color: #6B6B67;">Sent via klooster.com.au</p>`;
@@ -143,6 +177,7 @@ async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
     .split(',')[0].trim();
@@ -180,3 +215,4 @@ module.exports.checkRateLimit = checkRateLimit;
 module.exports.generateSummary = generateSummary;
 module.exports.sendBarristerEmail = sendBarristerEmail;
 module.exports.sendConfirmationEmail = sendConfirmationEmail;
+module.exports.escHtml = escHtml;
