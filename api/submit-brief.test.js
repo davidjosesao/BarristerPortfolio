@@ -336,3 +336,118 @@ describe('sendConfirmationEmail', () => {
     ).rejects.toThrow('Resend delivery failure');
   });
 });
+
+// --- handler (integration) ---
+
+const handler = require('./submit-brief');
+
+function makeReq(overrides = {}) {
+  return {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    socket: { remoteAddress: '127.0.0.1' },
+    body: {
+      yourName: 'Jane Smith',
+      yourEmail: 'jane@example.com',
+      parties: 'Smith v Jones',
+      court: 'NSW Supreme Court',
+      jurisdiction: 'NSW',
+      matterType: 'Commercial',
+      urgency: 'Standard',
+      keyFacts: 'A disputed contract.',
+    },
+    ...overrides,
+  };
+}
+
+function makeRes() {
+  const res = {
+    _status: null,
+    _body: null,
+    _headers: {},
+    status(code) { this._status = code; return this; },
+    json(body) { this._body = body; return this; },
+    end() { return this; },
+    setHeader(k, v) { this._headers[k] = v; },
+  };
+  return res;
+}
+
+describe('handler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    kv.incr.mockResolvedValue(1);
+    kv.expire.mockResolvedValue(null);
+    mockCreate.mockResolvedValue({ content: [{ text: '— summary' }] });
+    mockSend.mockResolvedValue({ id: 'abc' });
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.FROM_EMAIL = 'from@example.com';
+    process.env.RECIPIENT_EMAIL = 'barrister@example.com';
+    delete process.env.CLERK_EMAIL;
+  });
+
+  test('returns 200 { success: true } for a valid POST', async () => {
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res._status).toBe(200);
+    expect(res._body).toEqual({ success: true });
+  });
+
+  test('returns 200 for OPTIONS preflight', async () => {
+    const res = makeRes();
+    await handler(makeReq({ method: 'OPTIONS' }), res);
+    expect(res._status).toBe(200);
+  });
+
+  test('sets CORS headers on every response', async () => {
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res._headers['Access-Control-Allow-Origin']).toBe('*');
+    expect(res._headers['Access-Control-Allow-Methods']).toBe('POST, OPTIONS');
+  });
+
+  test('returns 429 when rate limit is exceeded', async () => {
+    kv.incr.mockResolvedValue(6);
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res._status).toBe(429);
+    expect(res._body.error).toContain('Too many submissions');
+  });
+
+  test('returns 400 when required field is missing', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { yourName: 'Jane' } }), res);
+    expect(res._status).toBe(400);
+    expect(res._body.field).toBeDefined();
+  });
+
+  test('returns 200 even when Claude API fails (non-fatal)', async () => {
+    mockCreate.mockRejectedValue(new Error('quota exceeded'));
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res._status).toBe(200);
+  });
+
+  test('returns 500 when barrister email fails', async () => {
+    mockSend.mockRejectedValueOnce(new Error('Resend error'));
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res._status).toBe(500);
+    expect(res._body.error).toContain('Submission failed');
+  });
+
+  test('uses x-forwarded-for header for rate limit key', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ headers: { 'x-forwarded-for': '5.5.5.5, 1.1.1.1', 'content-type': 'application/json' } }),
+      res
+    );
+    expect(kv.incr).toHaveBeenCalledWith('ratelimit:5.5.5.5');
+  });
+
+  test('sends two emails on success', async () => {
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+});

@@ -138,7 +138,40 @@ https://www.8garfieldbarwick.com.au`,
 }
 
 async function handler(req, res) {
-  res.status(501).end();
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
+    .split(',')[0].trim();
+
+  const limited = await checkRateLimit(ip);
+  if (limited) {
+    return res.status(429).json({
+      error: 'Too many submissions. Please email mklooster@chambers.net.au directly.',
+    });
+  }
+
+  const body = req.body || {};
+  const validationError = validateBody(body);
+  if (validationError) return res.status(400).json(validationError);
+
+  const timestamp = new Date().toISOString();
+  const summary = await generateSummary(body);
+
+  try {
+    await sendBarristerEmail(body, summary, timestamp);
+    await sendConfirmationEmail(body, timestamp);
+  } catch (err) {
+    console.error('Email delivery failed:', err.message);
+    return res.status(500).json({
+      error: 'Submission failed. Please email mklooster@chambers.net.au directly.',
+    });
+  }
+
+  return res.status(200).json({ success: true });
 }
 
 module.exports = handler;
