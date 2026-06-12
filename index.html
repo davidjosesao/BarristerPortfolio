@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Michael Klooster — Barrister</title>
+  <meta name="description" content="Michael Klooster — Barrister, 8th Floor Garfield Barwick Chambers, Sydney NSW." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    :root {
+      --bg:     #181A1C;
+      --surface:#1F2124;
+      --text:   #E8E5DF;
+      --muted:  rgba(232,229,223,0.44);
+      --dim:    rgba(232,229,223,0.22);
+      --rule:   rgba(232,229,223,0.10);
+      --ease:   cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    ::selection { background: rgba(232,229,223,0.18); }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .col {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .row-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding-top: 4px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(24,26,28,0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 0;
+    }
+    .nav-mark {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      opacity: 0.85;
+      transition: opacity 0.2s;
+    }
+    .nav-mark:hover { opacity: 1; }
+    .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 32px;
+    }
+    .nav-links a {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.25s;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 100%;
+      bottom: -4px;
+      height: 1px;
+      background: var(--text);
+      transition: right 0.35s var(--ease);
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover::after { right: 0; }
+
+    main, footer { position: relative; z-index: 1; }
+    hr { border: none; border-top: 1px solid var(--rule); }
+
+    /* ── Monogram watermark ── */
+    .hero-monogram {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+    .mono-letter {
+      position: absolute;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: 580px;
+      line-height: 1;
+      color: rgba(232,229,223,0.024);
+      white-space: nowrap;
+    }
+    .mono-letter-m { left: 50%; top: 50%; transform: translate(-92%, -56%); }
+    .mono-letter-k { left: 50%; top: 50%; transform: translate(-14%, -44%); }
+
+    /* ── Hero ── */
+    #hero {
+      padding: 120px 0 104px;
+      border-bottom: 1px solid var(--rule);
+      position: relative;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 232px;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+    }
+    .hero-kicker {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .hero-kicker::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 1px;
+      background: var(--dim);
+    }
+    .hero-name {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: clamp(48px, 7.5vw, 84px);
+      font-weight: 400;
+      font-style: italic;
+      color: var(--text);
+      line-height: 1.02;
+      letter-spacing: -0.015em;
+      margin-bottom: 18px;
+    }
+    .hero-title {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .hero-chambers a {
+      font-size: 14px;
+      color: rgba(232,229,223,0.6);
+      text-decoration: none;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .hero-chambers a:hover { color: var(--text); border-color: var(--dim); }
+
+    .hero-foot {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      flex-wrap: wrap;
+      margin-top: 44px;
+    }
+
+    .contact-block { display: flex; flex-direction: column; gap: 6px; }
+    .contact-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+    .contact-lbl {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(232,229,223,0.55);
+      min-width: 46px;
+      flex-shrink: 0;
+    }
+    .contact-dot { color: var(--rule); font-size: 13px; }
+    .contact-row a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .contact-row a:hover { color: var(--text); }
+
+    .hero-photo {
+      width: 232px;
+      height: 300px;
+      border-radius: 3px;
+      overflow: hidden;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .hero-photo::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(232,229,223,0.08);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+    .hero-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+      filter: grayscale(18%) contrast(1.02);
+      transform: scale(1.04);
+      transition: transform 1.2s var(--ease), filter 0.6s;
+    }
+    .hero-photo:hover img { transform: scale(1.0); filter: grayscale(0%) contrast(1); }
+
+    /* ── Buttons ── */
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(232,229,223,0.22);
+      color: rgba(232,229,223,0.78);
+      padding: 13px 28px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .btn-outline .btn-arrow { display: inline-block; transition: transform 0.35s var(--ease); }
+    .btn-outline:hover { background: var(--text); border-color: var(--text); color: var(--bg); }
+    .btn-outline:hover .btn-arrow { transform: translateX(4px); }
+
+    /* ── Profile ── */
+    #profile { padding: 88px 0; border-bottom: 1px solid var(--rule); }
+    .profile-links { display: flex; flex-direction: column; }
+    .profile-link-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 26px 20px;
+      margin: 0 -20px;
+      border-bottom: 1px solid var(--rule);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.3s;
+      border-radius: 2px;
+    }
+    .profile-link-row:first-child { border-top: 1px solid var(--rule); }
+    .profile-link-row:hover { background: rgba(232,229,223,0.035); }
+    .profile-link-label { font-family: 'EB Garamond', Georgia, serif; font-size: 22px; color: var(--text); font-weight: 400; letter-spacing: 0.005em; }
+    .profile-link-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .profile-link-arrow {
+      font-size: 17px;
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-left: 16px;
+      transition: transform 0.35s var(--ease), color 0.3s;
+    }
+    .profile-link-row:hover .profile-link-arrow { color: var(--text); }
+    .profile-link-row:hover .arrow-down { transform: translateY(3px); }
+    .profile-link-row:hover .arrow-out { transform: translate(2px, -2px); }
+
+    /* ── Brief CTA ── */
+    #brief-cta { padding: 88px 0; border-bottom: 1px solid var(--rule); }
+    .brief-cta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .brief-cta-text p {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 23px;
+      font-style: italic;
+      color: rgba(232,229,223,0.72);
+      line-height: 1.5;
+      max-width: 480px;
+      text-wrap: pretty;
+    }
+
+    /* ── Footer ── */
+    footer { padding: 88px 0 56px; }
+    .footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-bottom: 64px; }
+    .footer-left strong {
+      display: block;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text);
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+    .footer-left p { font-size: 13px; color: var(--muted); line-height: 1.85; }
+    .footer-right { display: flex; flex-direction: column; align-items: flex-start; }
+    .footer-right a { display: block; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; line-height: 1.85; }
+    .footer-right a:hover { color: var(--text); }
+    .footer-chambers-link {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 13px;
+      color: rgba(232,229,223,0.6) !important;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .footer-chambers-link:hover { color: var(--text) !important; border-color: var(--dim); }
+    .footer-bottom {
+      border-top: 1px solid var(--rule);
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: rgba(232,229,223,0.22);
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Entrance animations ── */
+    @media (prefers-reduced-motion: no-preference) {
+      body.js-anim .enter {
+        opacity: 0;
+        transform: translateY(22px);
+        animation: enterUp 0.9s var(--ease) forwards;
+      }
+      body.js-anim .enter-1 { animation-delay: 0.05s; }
+      body.js-anim .enter-2 { animation-delay: 0.16s; }
+      body.js-anim .enter-3 { animation-delay: 0.27s; }
+      body.js-anim .enter-4 { animation-delay: 0.38s; }
+      body.js-anim .enter-photo {
+        opacity: 0;
+        clip-path: inset(0 0 100% 0);
+        animation: enterPhoto 1.1s var(--ease) 0.3s forwards;
+      }
+      @keyframes enterUp { to { opacity: 1; transform: translateY(0); } }
+      @keyframes enterPhoto { to { opacity: 1; clip-path: inset(0 0 0% 0); } }
+    }
+
+    /* ── Scroll reveal ── */
+    body.js-anim .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+    }
+    body.js-anim .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+    body.js-anim hr.rule-draw {
+      transform-origin: left center;
+      transform: scaleX(0);
+      transition: transform 1.2s var(--ease);
+    }
+    body.js-anim hr.rule-draw.is-visible { transform: scaleX(1); }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.js-anim .reveal,
+      body.js-anim hr.rule-draw,
+      body.js-anim .enter,
+      body.js-anim .enter-photo {
+        transition: none !important;
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        clip-path: none !important;
+      }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) {
+      .col { padding: 0 32px; }
+      .row { grid-template-columns: 1fr; gap: 20px; }
+      .hero-inner { gap: 48px; }
+      .mono-letter-m, .mono-letter-k { display: none; }
+    }
+    @media (max-width: 640px) {
+      .col { padding: 0 24px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 36px; }
+      .hero-photo { width: 148px; height: 190px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      #hero { padding: 64px 0; }
+      #profile, #brief-cta { padding: 56px 0; }
+      footer { padding: 56px 0 40px; }
+      .brief-cta-row { flex-direction: column; align-items: flex-start; }
+      .hero-foot { flex-direction: column; align-items: flex-start; gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero-monogram" aria-hidden="true">
+    <span class="mono-letter mono-letter-m">M</span>
+    <span class="mono-letter mono-letter-k">K</span>
+  </div>
+
+  <nav aria-label="Main navigation">
+    <div class="col">
+      <div class="nav-inner">
+        <a href="#hero" class="nav-mark">M. Klooster</a>
+        <ul class="nav-links" role="list">
+          <li><a href="#profile">Profile</a></li>
+          <li><a href="brief.html">Brief</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+
+    <section id="hero" aria-label="Introduction">
+      <div class="col">
+        <div class="hero-inner">
+          <div>
+            <p class="hero-kicker enter enter-1">New South Wales Bar · Sydney</p>
+            <h1 class="hero-name enter enter-2">Michael Klooster</h1>
+            <div class="enter enter-3">
+              <p class="hero-title">Barrister</p>
+              <p class="hero-chambers">
+                <a href="https://www.8garfieldbarwick.com.au" target="_blank" rel="noopener noreferrer">
+                  8th Floor Garfield Barwick Chambers
+                </a>
+              </p>
+            </div>
+            <div class="hero-foot enter enter-4">
+              <a href="brief.html" class="btn-outline">Submit a brief <span class="btn-arrow" aria-hidden="true">→</span></a>
+              <div class="contact-block">
+                <div class="contact-row">
+                  <span class="contact-lbl">Direct</span>
+                  <a href="tel:+61282393256">(02) 8239 3256</a>
+                  <span class="contact-dot" aria-hidden="true">·</span>
+                  <a href="mailto:mklooster@chambers.net.au">mklooster@chambers.net.au</a>
+                </div>
+                <div class="contact-row">
+                  <span class="contact-lbl">Clerk</span>
+                  <a href="tel:+61282393200">(02) 8239 3200</a>
+                  <span class="contact-dot" aria-hidden="true">·</span>
+                  <a href="mailto:reception@8gbc.com.au">reception@8gbc.com.au</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-photo enter-photo">
+            <img src="uploads/photo-1780994244649.png" alt="Michael Klooster" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="profile" aria-labelledby="profile-heading">
+      <div class="col">
+        <div class="row">
+          <p class="row-label reveal" id="profile-heading">Profile</p>
+          <div class="profile-links reveal">
+            <a href="#" class="profile-link-row" aria-label="Download CV">
+              <div>
+                <div class="profile-link-label">Curriculum Vitae</div>
+                <div class="profile-link-sub">Admitted 2005 · Called to the NSW Bar 2010</div>
+              </div>
+              <span class="profile-link-arrow arrow-down" aria-hidden="true">↓</span>
+            </a>
+            <a href="https://www.8garfieldbarwick.com.au/barrister.html?id=klooster"
+               target="_blank" rel="noopener noreferrer"
+               class="profile-link-row"
+               aria-label="View chambers profile">
+              <div>
+                <div class="profile-link-label">Chambers Profile</div>
+                <div class="profile-link-sub">8th Floor Garfield Barwick Chambers</div>
+              </div>
+              <span class="profile-link-arrow arrow-out" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="brief-cta" aria-labelledby="brief-heading">
+      <div class="col" style="position: relative; z-index: 1;">
+        <div class="row">
+          <p class="row-label reveal" id="brief-heading">Instructions</p>
+          <div class="brief-cta-row reveal">
+            <div class="brief-cta-text">
+              <p>To instruct Michael or enquire about availability, use the brief form.</p>
+            </div>
+            <a href="brief.html" class="btn-outline">Submit a brief <span class="btn-arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer id="contact" aria-label="Contact">
+    <div class="col">
+      <div class="row">
+        <p class="row-label reveal">Contact</p>
+        <div>
+          <div class="footer-grid reveal">
+            <div class="footer-left">
+              <strong>Michael Klooster</strong>
+              <p>
+                Barrister · 8th Floor Garfield Barwick Chambers<br />
+                Level 8 · 53 Martin Place<br />
+                Sydney NSW 2000
+              </p>
+            </div>
+            <div class="footer-right">
+              <a href="tel:+61282393256">Direct: (02) 8239 3256</a>
+              <a href="mailto:mklooster@chambers.net.au">mklooster@chambers.net.au</a>
+              <a href="tel:+61282393200" style="margin-top:10px;">Clerk: (02) 8239 3200</a>
+              <a href="mailto:reception@8gbc.com.au">reception@8gbc.com.au</a>
+              <a href="https://www.8garfieldbarwick.com.au" target="_blank" rel="noopener noreferrer" class="footer-chambers-link">
+                8th Floor Garfield Barwick Chambers ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <p class="footer-bottom">
+    <span>© 2026 Michael Klooster · Barrister</span>
+    <span>Liability limited by a scheme approved under Professional Standards Legislation</span>
+  </p>
+
+  <script>
+    document.body.classList.add('js-anim');
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal, hr.rule-draw').forEach(function(el) {
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.92) {
+        el.classList.add('is-visible');
+      } else {
+        observer.observe(el);
+      }
+    });
+  </script>
+
+</body>
+</html>
