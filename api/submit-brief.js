@@ -74,6 +74,43 @@ Key facts: ${data.keyFacts}`;
   }
 }
 
+function buildBarristerHtml(data, summary, timestamp) {
+  return `<h2 style="font-family: Georgia, serif; font-size: 20px; color: #1C1C1A; margin-bottom: 4px;">New brief submission</h2>
+<p style="font-size: 13px; color: #6B6B67; margin-top: 0;">Received ${timestamp} · Submitted by ${data.yourName}</p>
+<hr style="border: none; border-top: 1px solid #D4C9A8; margin: 20px 0;">
+<h3 style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6B67;">AI Summary</h3>
+<div style="font-size: 15px; line-height: 1.7; color: #1C1C1A; white-space: pre-wrap;">${summary}</div>
+<hr style="border: none; border-top: 1px solid #D4C9A8; margin: 20px 0;">
+<h3 style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6B67;">Full details</h3>
+<table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+  <tr><td style="padding: 6px 0; color: #6B6B67; width: 160px;">Submitter</td><td>${data.yourName}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Firm</td><td>${data.firmName || '—'}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Email</td><td><a href="mailto:${data.yourEmail}">${data.yourEmail}</a></td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Phone</td><td>${data.yourPhone || '—'}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Parties</td><td>${data.parties}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Court</td><td>${data.court}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Jurisdiction</td><td>${data.jurisdiction}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Matter type</td><td>${data.matterType}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Hearing date</td><td>${data.hearingDate || 'Not set'}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67;">Urgency</td><td>${data.urgency}</td></tr>
+  <tr><td style="padding: 6px 0; color: #6B6B67; vertical-align: top;">Key facts</td><td style="white-space: pre-wrap;">${data.keyFacts}</td></tr>
+</table>
+<hr style="border: none; border-top: 1px solid #D4C9A8; margin: 20px 0;">
+<p style="font-size: 12px; color: #6B6B67;">Sent via klooster.com.au</p>`;
+}
+
+async function sendBarristerEmail(data, summary, timestamp) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const payload = {
+    from: process.env.FROM_EMAIL,
+    to: process.env.RECIPIENT_EMAIL,
+    subject: `New brief — ${data.matterType} · ${data.parties} · ${data.urgency}`,
+    html: buildBarristerHtml(data, summary, timestamp),
+  };
+  if (process.env.CLERK_EMAIL) payload.bcc = process.env.CLERK_EMAIL;
+  await resend.emails.send(payload);
+}
+
 async function handler(req, res) {
   res.status(501).end();
 }
@@ -82,3 +119,4 @@ module.exports = handler;
 module.exports.validateBody = validateBody;
 module.exports.checkRateLimit = checkRateLimit;
 module.exports.generateSummary = generateSummary;
+module.exports.sendBarristerEmail = sendBarristerEmail;

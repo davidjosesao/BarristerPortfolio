@@ -194,3 +194,86 @@ describe('generateSummary', () => {
     expect(userMsg).toContain('Submitter: Jane Smith\n');
   });
 });
+
+// --- sendBarristerEmail ---
+
+const { sendBarristerEmail } = require('./submit-brief');
+
+const EMAIL_DATA = {
+  yourName: 'Jane Smith',
+  firmName: 'Smith & Co',
+  yourEmail: 'jane@example.com',
+  yourPhone: '0400 000 000',
+  parties: 'Smith v Jones',
+  court: 'NSW Supreme Court',
+  jurisdiction: 'NSW',
+  matterType: 'Commercial',
+  hearingDate: '2026-09-15',
+  urgency: 'Standard',
+  keyFacts: 'A disputed contract.',
+};
+
+describe('sendBarristerEmail', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.FROM_EMAIL = 'from@example.com';
+    process.env.RECIPIENT_EMAIL = 'barrister@example.com';
+    delete process.env.CLERK_EMAIL;
+  });
+
+  test('sends to RECIPIENT_EMAIL with correct subject', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendBarristerEmail(EMAIL_DATA, '— summary', '2026-06-09T00:00:00.000Z');
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'barrister@example.com',
+        subject: 'New brief — Commercial · Smith v Jones · Standard',
+      })
+    );
+  });
+
+  test('includes BCC when CLERK_EMAIL env var is set', async () => {
+    process.env.CLERK_EMAIL = 'clerk@example.com';
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendBarristerEmail(EMAIL_DATA, '— summary', '2026-06-09T00:00:00.000Z');
+    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ bcc: 'clerk@example.com' }));
+  });
+
+  test('omits bcc property when CLERK_EMAIL is not set', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendBarristerEmail(EMAIL_DATA, '— summary', '2026-06-09T00:00:00.000Z');
+    expect(mockSend.mock.calls[0][0].bcc).toBeUndefined();
+  });
+
+  test('includes AI summary in HTML body', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendBarristerEmail(EMAIL_DATA, '— Parties: Smith v Jones', '2026-06-09T00:00:00.000Z');
+    expect(mockSend.mock.calls[0][0].html).toContain('— Parties: Smith v Jones');
+  });
+
+  test('includes all form fields in the details table', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    await sendBarristerEmail(EMAIL_DATA, '— summary', '2026-06-09T00:00:00.000Z');
+    const html = mockSend.mock.calls[0][0].html;
+    expect(html).toContain('Smith v Jones');
+    expect(html).toContain('NSW Supreme Court');
+    expect(html).toContain('jane@example.com');
+    expect(html).toContain('0400 000 000');
+  });
+
+  test('shows "Not set" for missing hearingDate', async () => {
+    mockSend.mockResolvedValue({ id: 'abc' });
+    const data = { ...EMAIL_DATA };
+    delete data.hearingDate;
+    await sendBarristerEmail(data, '— summary', '2026-06-09T00:00:00.000Z');
+    expect(mockSend.mock.calls[0][0].html).toContain('Not set');
+  });
+
+  test('throws when Resend returns an error', async () => {
+    mockSend.mockRejectedValue(new Error('Resend delivery failure'));
+    await expect(
+      sendBarristerEmail(EMAIL_DATA, '— summary', '2026-06-09T00:00:00.000Z')
+    ).rejects.toThrow('Resend delivery failure');
+  });
+});
