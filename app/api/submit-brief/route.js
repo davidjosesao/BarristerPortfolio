@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 
-// Re-use the validated handler logic from the existing file
 const {
   validateBody,
   checkRateLimit,
   generateSummary,
+  saveBrief,
   sendBarristerEmail,
   sendConfirmationEmail,
 } = require('../../../api/submit-brief')
@@ -21,7 +21,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(request) {
-  const ip = (request.headers.get('x-forwarded-for') || '0.0.0.0').split(',')[0].trim()
+  // request.ip is populated by Vercel from a trusted internal header
+  const ip = request.ip ?? (request.headers.get('x-forwarded-for') || '0.0.0.0').split(',')[0].trim()
 
   const limited = await checkRateLimit(ip)
   if (limited) {
@@ -38,7 +39,33 @@ export async function POST(request) {
   }
 
   const timestamp = new Date().toISOString()
+  // Generate stable idempotency key from request body to prevent duplicate submissions
+  const IDEMPOTENCY_KEY_RE = /^[a-zA-Z0-9_-]{1,128}$/
+  const idempotencyKey = (body.idempotencyKey && IDEMPOTENCY_KEY_RE.test(body.idempotencyKey))
+    ? body.idempotencyKey
+    : await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
+      yourName: body.yourName,
+      yourEmail: body.yourEmail,
+      parties: body.parties,
+      court: body.court,
+      jurisdiction: body.jurisdiction,
+      matterType: body.matterType,
+      urgency: body.urgency,
+      keyFacts: body.keyFacts,
+      hearingDate: body.hearingDate,
+      firmName: body.firmName,
+      yourPhone: body.yourPhone,
+    }))).then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''))
+  const submissionId = idempotencyKey
   const summary = await generateSummary(body)
+
+  const saved = await saveBrief(body, summary, timestamp, submissionId)
+  if (!saved) {
+    return NextResponse.json(
+      { error: 'Submission failed. Please email mklooster@chambers.net.au directly.' },
+      { status: 500 }
+    )
+  }
 
   try {
     await sendBarristerEmail(body, summary, timestamp)

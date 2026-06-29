@@ -1,15 +1,17 @@
 'use strict';
 
 const { kv } = require('@vercel/kv');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 
 const REQUIRED_FIELDS = ['yourName', 'yourEmail', 'parties', 'court', 'jurisdiction', 'matterType', 'urgency', 'keyFacts'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const IDEMPOTENCY_KEY_RE = /^[a-zA-Z0-9_-]{1,128}$/;
 const FIELD_LIMITS = {
   yourName: 120, yourEmail: 254, parties: 200, court: 100,
   jurisdiction: 50, matterType: 50, urgency: 50,
-  firmName: 120, yourPhone: 30,
+  firmName: 120, yourPhone: 30, hearingDate: 10,
 };
 
 function escHtml(str) {
@@ -31,6 +33,9 @@ function validateBody(body) {
   }
   if (!EMAIL_RE.test(body.yourEmail)) {
     return { error: 'yourEmail must be a valid email address', field: 'yourEmail' };
+  }
+  if (body.idempotencyKey && !IDEMPOTENCY_KEY_RE.test(body.idempotencyKey)) {
+    return { error: 'idempotencyKey must be 1-128 alphanumeric characters, hyphens, or underscores', field: 'idempotencyKey' };
   }
   for (const [field, max] of Object.entries(FIELD_LIMITS)) {
     if (body[field] && typeof body[field] === 'string' && body[field].length > max) {
@@ -55,7 +60,7 @@ async function checkRateLimit(ip) {
   }
 }
 
-const SYSTEM_PROMPT = `You are a legal assistant helping a barrister quickly understand an incoming brief.
+const SUMMARY_PROMPT = `You are a legal assistant helping a barrister quickly understand an incoming brief.
 Summarise the following brief submission in exactly 5 bullet points using plain, precise language.
 The 5 points must be:
 1. Parties — who is involved
@@ -69,8 +74,12 @@ Use "—" as the bullet character.`;
 
 async function generateSummary(data) {
   try {
-    const client = new Anthropic();
-    const userMessage = `Submitter: ${data.yourName}${data.firmName ? `, ${data.firmName}` : ''}
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `${SUMMARY_PROMPT}
+
+Submitter: ${data.yourName}${data.firmName ? `, ${data.firmName}` : ''}
 Parties: ${data.parties}
 Court/tribunal: ${data.court}
 Jurisdiction: ${data.jurisdiction}
@@ -79,35 +88,106 @@ Hearing date: ${data.hearingDate || 'Not set'}
 Urgency: ${data.urgency}
 Key facts: ${data.keyFacts}`;
 
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      temperature: 0,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }],
-    });
-    return message.content[0].text;
+    const result = await model.generateContent(prompt);
+    return result.response.text();
   } catch (err) {
-    console.error('Claude API error:', err.message);
+    console.error('Gemini API error:', err.message);
     return 'AI summary unavailable — see full details below.';
   }
 }
 
+// Returns true on success, false on failure.
+// Uses insert with ON CONFLICT to preserve staff-managed fields on retry.
+async function saveBrief(data, summary, timestamp, submissionId) {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // Try insert first
+    const { error: insertError } = await supabase.from('briefs').insert({
+      submission_id: submissionId,
+      created_at: timestamp,
+      your_name: data.yourName,
+      firm_name: data.firmName || null,
+      your_email: data.yourEmail,
+      your_phone: data.yourPhone || null,
+      parties: data.parties,
+      court: data.court,
+      jurisdiction: data.jurisdiction,
+      matter_type: data.matterType,
+      urgency: data.urgency,
+      hearing_date: data.hearingDate || null,
+      key_facts: data.keyFacts,
+      ai_summary: summary,
+      status: 'new',
+      staff_notes: null,
+    });
+
+    // If duplicate key, update only brief fields (preserve status/staff_notes)
+    if (insertError && insertError.code === '23505') {
+      const { error: updateError } = await supabase
+        .from('briefs')
+        .update({
+          created_at: timestamp,
+          your_name: data.yourName,
+          firm_name: data.firmName || null,
+          your_email: data.yourEmail,
+          your_phone: data.yourPhone || null,
+          parties: data.parties,
+          court: data.court,
+          jurisdiction: data.jurisdiction,
+          matter_type: data.matterType,
+          urgency: data.urgency,
+          hearing_date: data.hearingDate || null,
+          key_facts: data.keyFacts,
+          ai_summary: summary,
+        })
+        .eq('submission_id', submissionId);
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError.message);
+        return false;
+      }
+    } else if (insertError) {
+      console.error('Supabase insert error:', insertError.message);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Supabase unavailable:', err.message);
+    return false;
+  }
+}
+
+// Blocked on VERCEL_ENV=production so TEST_EMAIL_OVERRIDE can never leak
+// confidential brief data to a personal inbox in live deployments.
+function resolveEmail(address) {
+  if (process.env.TEST_EMAIL_OVERRIDE) {
+    if (process.env.VERCEL_ENV === 'production') {
+      throw new Error('TEST_EMAIL_OVERRIDE must not be set in production');
+    }
+    return process.env.TEST_EMAIL_OVERRIDE;
+  }
+  return address;
+}
+
 function buildBarristerHtml(data, summary, timestamp) {
-  const name       = escHtml(data.yourName);
-  const firm       = data.firmName ? escHtml(data.firmName) : '—';
-  const email      = escHtml(data.yourEmail);
-  const phone      = data.yourPhone ? escHtml(data.yourPhone) : '—';
-  const parties    = escHtml(data.parties);
-  const court      = escHtml(data.court);
-  const juris      = escHtml(data.jurisdiction);
-  const matter     = escHtml(data.matterType);
-  const hearing    = data.hearingDate ? escHtml(data.hearingDate) : 'Not set';
-  const urgency    = escHtml(data.urgency);
-  const facts      = escHtml(data.keyFacts);
-  const ts         = escHtml(timestamp);
-  // summary comes from Claude — escape defensively in case of unexpected output
-  const safeSum    = escHtml(summary);
+  const name    = escHtml(data.yourName);
+  const firm    = data.firmName ? escHtml(data.firmName) : '—';
+  const email   = escHtml(data.yourEmail);
+  const phone   = data.yourPhone ? escHtml(data.yourPhone) : '—';
+  const parties = escHtml(data.parties);
+  const court   = escHtml(data.court);
+  const juris   = escHtml(data.jurisdiction);
+  const matter  = escHtml(data.matterType);
+  const hearing = data.hearingDate ? escHtml(data.hearingDate) : 'Not set';
+  const urgency = escHtml(data.urgency);
+  const facts   = escHtml(data.keyFacts);
+  const ts      = escHtml(timestamp);
+  const safeSum = escHtml(summary);
 
   return `<h2 style="font-family: Georgia, serif; font-size: 20px; color: #1C1C1A; margin-bottom: 4px;">New brief submission</h2>
 <p style="font-size: 13px; color: #6B6B67; margin-top: 0;">Received ${ts} · Submitted by ${name}</p>
@@ -137,11 +217,13 @@ async function sendBarristerEmail(data, summary, timestamp) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const payload = {
     from: process.env.FROM_EMAIL,
-    to: process.env.RECIPIENT_EMAIL,
+    to: resolveEmail(process.env.RECIPIENT_EMAIL),
     subject: `New brief — ${data.matterType} · ${data.parties} · ${data.urgency}`,
     html: buildBarristerHtml(data, summary, timestamp),
   };
-  if (process.env.CLERK_EMAIL) payload.bcc = process.env.CLERK_EMAIL;
+  if (process.env.CLERK_EMAIL && !process.env.TEST_EMAIL_OVERRIDE) {
+    payload.bcc = process.env.CLERK_EMAIL;
+  }
   await resend.emails.send(payload);
 }
 
@@ -149,7 +231,7 @@ async function sendConfirmationEmail(data, timestamp) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: process.env.FROM_EMAIL,
-    to: data.yourEmail,
+    to: resolveEmail(data.yourEmail),
     subject: 'Brief received — Michael Klooster',
     text: `Hi ${data.yourName},
 
@@ -179,8 +261,13 @@ async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
-    .split(',')[0].trim();
+  // x-real-ip is set by Vercel's infrastructure and cannot be spoofed by the client
+  const ip = (
+    req.headers['x-real-ip'] ||
+    req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+    req.socket?.remoteAddress ||
+    'unknown'
+  );
 
   const limited = await checkRateLimit(ip);
   if (limited) {
@@ -194,7 +281,31 @@ async function handler(req, res) {
   if (validationError) return res.status(400).json(validationError);
 
   const timestamp = new Date().toISOString();
+  // Generate stable idempotency key from request body to prevent duplicate submissions
+  const idempotencyKey = (body.idempotencyKey && IDEMPOTENCY_KEY_RE.test(body.idempotencyKey))
+    ? body.idempotencyKey
+    : await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
+      yourName: body.yourName,
+      yourEmail: body.yourEmail,
+      parties: body.parties,
+      court: body.court,
+      jurisdiction: body.jurisdiction,
+      matterType: body.matterType,
+      urgency: body.urgency,
+      keyFacts: body.keyFacts,
+      hearingDate: body.hearingDate,
+      firmName: body.firmName,
+      yourPhone: body.yourPhone,
+    }))).then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''));
+  const submissionId = idempotencyKey;
   const summary = await generateSummary(body);
+
+  const saved = await saveBrief(body, summary, timestamp, submissionId);
+  if (!saved) {
+    return res.status(500).json({
+      error: 'Submission failed. Please email mklooster@chambers.net.au directly.',
+    });
+  }
 
   try {
     await sendBarristerEmail(body, summary, timestamp);
@@ -213,6 +324,7 @@ module.exports = handler;
 module.exports.validateBody = validateBody;
 module.exports.checkRateLimit = checkRateLimit;
 module.exports.generateSummary = generateSummary;
+module.exports.saveBrief = saveBrief;
 module.exports.sendBarristerEmail = sendBarristerEmail;
 module.exports.sendConfirmationEmail = sendConfirmationEmail;
 module.exports.escHtml = escHtml;
