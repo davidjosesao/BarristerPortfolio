@@ -39,7 +39,22 @@ export async function POST(request) {
   }
 
   const timestamp = new Date().toISOString()
-  const submissionId = crypto.randomUUID()
+  // Generate stable idempotency key from request body to prevent duplicate submissions
+  const idempotencyKey = body.idempotencyKey ||
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
+      yourName: body.yourName,
+      yourEmail: body.yourEmail,
+      parties: body.parties,
+      court: body.court,
+      jurisdiction: body.jurisdiction,
+      matterType: body.matterType,
+      urgency: body.urgency,
+      keyFacts: body.keyFacts,
+      hearingDate: body.hearingDate,
+      firmName: body.firmName,
+      yourPhone: body.yourPhone,
+    }))).then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''))
+  const submissionId = idempotencyKey
   const summary = await generateSummary(body)
 
   const saved = await saveBrief(body, summary, timestamp, submissionId)

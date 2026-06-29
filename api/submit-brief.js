@@ -93,15 +93,15 @@ Key facts: ${data.keyFacts}`;
 }
 
 // Returns true on success, false on failure.
-// Uses submission_id for idempotency — add a UNIQUE constraint on that column
-// in Supabase so retries after email failure don't create duplicate records.
+// Uses upsert on submission_id for idempotency — retries after email failure
+// will resume the existing record rather than creating duplicate records.
 async function saveBrief(data, summary, timestamp, submissionId) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const { error } = await supabase.from('briefs').insert({
+    const { error } = await supabase.from('briefs').upsert({
       submission_id: submissionId,
       created_at: timestamp,
       your_name: data.yourName,
@@ -118,9 +118,9 @@ async function saveBrief(data, summary, timestamp, submissionId) {
       ai_summary: summary,
       status: 'new',
       staff_notes: null,
-    });
+    }, { onConflict: 'submission_id' });
     if (error) {
-      console.error('Supabase insert error:', error.message);
+      console.error('Supabase upsert error:', error.message);
       return false;
     }
     return true;
@@ -249,7 +249,22 @@ async function handler(req, res) {
   if (validationError) return res.status(400).json(validationError);
 
   const timestamp = new Date().toISOString();
-  const submissionId = crypto.randomUUID();
+  // Generate stable idempotency key from request body to prevent duplicate submissions
+  const idempotencyKey = body.idempotencyKey ||
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
+      yourName: body.yourName,
+      yourEmail: body.yourEmail,
+      parties: body.parties,
+      court: body.court,
+      jurisdiction: body.jurisdiction,
+      matterType: body.matterType,
+      urgency: body.urgency,
+      keyFacts: body.keyFacts,
+      hearingDate: body.hearingDate,
+      firmName: body.firmName,
+      yourPhone: body.yourPhone,
+    }))).then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''))
+  const submissionId = idempotencyKey;
   const summary = await generateSummary(body);
 
   const saved = await saveBrief(body, summary, timestamp, submissionId);
