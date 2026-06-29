@@ -7,6 +7,7 @@ const { Resend } = require('resend');
 
 const REQUIRED_FIELDS = ['yourName', 'yourEmail', 'parties', 'court', 'jurisdiction', 'matterType', 'urgency', 'keyFacts'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const IDEMPOTENCY_KEY_RE = /^[a-zA-Z0-9_-]{1,128}$/;
 const FIELD_LIMITS = {
   yourName: 120, yourEmail: 254, parties: 200, court: 100,
   jurisdiction: 50, matterType: 50, urgency: 50,
@@ -32,6 +33,9 @@ function validateBody(body) {
   }
   if (!EMAIL_RE.test(body.yourEmail)) {
     return { error: 'yourEmail must be a valid email address', field: 'yourEmail' };
+  }
+  if (body.idempotencyKey && !IDEMPOTENCY_KEY_RE.test(body.idempotencyKey)) {
+    return { error: 'idempotencyKey must be 1-128 alphanumeric characters, hyphens, or underscores', field: 'idempotencyKey' };
   }
   for (const [field, max] of Object.entries(FIELD_LIMITS)) {
     if (body[field] && typeof body[field] === 'string' && body[field].length > max) {
@@ -93,15 +97,16 @@ Key facts: ${data.keyFacts}`;
 }
 
 // Returns true on success, false on failure.
-// Uses upsert on submission_id for idempotency — retries after email failure
-// will resume the existing record rather than creating duplicate records.
+// Uses insert with ON CONFLICT to preserve staff-managed fields on retry.
 async function saveBrief(data, summary, timestamp, submissionId) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const { error } = await supabase.from('briefs').upsert({
+
+    // Try insert first
+    const { error: insertError } = await supabase.from('briefs').insert({
       submission_id: submissionId,
       created_at: timestamp,
       your_name: data.yourName,
@@ -118,11 +123,38 @@ async function saveBrief(data, summary, timestamp, submissionId) {
       ai_summary: summary,
       status: 'new',
       staff_notes: null,
-    }, { onConflict: 'submission_id' });
-    if (error) {
-      console.error('Supabase upsert error:', error.message);
+    });
+
+    // If duplicate key, update only brief fields (preserve status/staff_notes)
+    if (insertError && insertError.code === '23505') {
+      const { error: updateError } = await supabase
+        .from('briefs')
+        .update({
+          created_at: timestamp,
+          your_name: data.yourName,
+          firm_name: data.firmName || null,
+          your_email: data.yourEmail,
+          your_phone: data.yourPhone || null,
+          parties: data.parties,
+          court: data.court,
+          jurisdiction: data.jurisdiction,
+          matter_type: data.matterType,
+          urgency: data.urgency,
+          hearing_date: data.hearingDate || null,
+          key_facts: data.keyFacts,
+          ai_summary: summary,
+        })
+        .eq('submission_id', submissionId);
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError.message);
+        return false;
+      }
+    } else if (insertError) {
+      console.error('Supabase insert error:', insertError.message);
       return false;
     }
+
     return true;
   } catch (err) {
     console.error('Supabase unavailable:', err.message);
@@ -250,8 +282,9 @@ async function handler(req, res) {
 
   const timestamp = new Date().toISOString();
   // Generate stable idempotency key from request body to prevent duplicate submissions
-  const idempotencyKey = body.idempotencyKey ||
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
+  const idempotencyKey = (body.idempotencyKey && IDEMPOTENCY_KEY_RE.test(body.idempotencyKey))
+    ? body.idempotencyKey
+    : await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
       yourName: body.yourName,
       yourEmail: body.yourEmail,
       parties: body.parties,
@@ -263,7 +296,7 @@ async function handler(req, res) {
       hearingDate: body.hearingDate,
       firmName: body.firmName,
       yourPhone: body.yourPhone,
-    }))).then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''))
+    }))).then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''));
   const submissionId = idempotencyKey;
   const summary = await generateSummary(body);
 

@@ -40,8 +40,10 @@ export async function POST(request) {
 
   const timestamp = new Date().toISOString()
   // Generate stable idempotency key from request body to prevent duplicate submissions
-  const idempotencyKey = body.idempotencyKey ||
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
+  const IDEMPOTENCY_KEY_RE = /^[a-zA-Z0-9_-]{1,128}$/
+  const idempotencyKey = (body.idempotencyKey && IDEMPOTENCY_KEY_RE.test(body.idempotencyKey))
+    ? body.idempotencyKey
+    : await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({
       yourName: body.yourName,
       yourEmail: body.yourEmail,
       parties: body.parties,
