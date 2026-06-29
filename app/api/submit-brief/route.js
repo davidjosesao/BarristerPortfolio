@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 
-// Re-use the validated handler logic from the existing file
 const {
   validateBody,
   checkRateLimit,
   generateSummary,
+  saveBrief,
   sendBarristerEmail,
   sendConfirmationEmail,
 } = require('../../../api/submit-brief')
@@ -21,7 +21,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(request) {
-  const ip = (request.headers.get('x-forwarded-for') || '0.0.0.0').split(',')[0].trim()
+  // request.ip is populated by Vercel from a trusted internal header
+  const ip = request.ip ?? (request.headers.get('x-forwarded-for') || '0.0.0.0').split(',')[0].trim()
 
   const limited = await checkRateLimit(ip)
   if (limited) {
@@ -38,7 +39,16 @@ export async function POST(request) {
   }
 
   const timestamp = new Date().toISOString()
+  const submissionId = crypto.randomUUID()
   const summary = await generateSummary(body)
+
+  const saved = await saveBrief(body, summary, timestamp, submissionId)
+  if (!saved) {
+    return NextResponse.json(
+      { error: 'Submission failed. Please email mklooster@chambers.net.au directly.' },
+      { status: 500 }
+    )
+  }
 
   try {
     await sendBarristerEmail(body, summary, timestamp)

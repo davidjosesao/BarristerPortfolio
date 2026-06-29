@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '../../../lib/supabase/server'
+import BriefRow from './BriefRow'
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string }> = {
   new:      { color: '#E8C97A', bg: 'rgba(232,201,122,0.08)', border: 'rgba(232,201,122,0.25)' },
@@ -109,23 +109,7 @@ export default async function BriefsListPage() {
             </div>
 
             {briefs.map((b, i) => (
-              <Link
-                key={b.id}
-                href={`/staff/briefs/${b.id}`}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '140px 1fr 160px 110px 90px 100px 32px',
-                  gap: '16px',
-                  padding: '16px 20px',
-                  borderBottom: i < briefs.length - 1 ? '1px solid var(--rule)' : 'none',
-                  textDecoration: 'none',
-                  alignItems: 'center',
-                  transition: 'background 0.2s',
-                  background: 'transparent',
-                }}
-                onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-              >
+              <BriefRow key={b.id} href={`/staff/briefs/${b.id}`} isLast={i === briefs.length - 1}>
                 <span style={{ fontSize: '13px', color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
                   {new Date(b.created_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
@@ -138,7 +122,7 @@ export default async function BriefsListPage() {
                 <span style={{ fontSize: '13px', color: b.urgency === 'Immediate' ? '#E8C97A' : 'var(--muted)' }}>{b.urgency}</span>
                 <StatusBadge status={b.status} />
                 <span style={{ fontSize: '16px', color: 'var(--dim)' }}>→</span>
-              </Link>
+              </BriefRow>
             ))}
           </div>
         )}

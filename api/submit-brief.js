@@ -10,7 +10,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FIELD_LIMITS = {
   yourName: 120, yourEmail: 254, parties: 200, court: 100,
   jurisdiction: 50, matterType: 50, urgency: 50,
-  firmName: 120, yourPhone: 30,
+  firmName: 120, yourPhone: 30, hearingDate: 10,
 };
 
 function escHtml(str) {
@@ -92,13 +92,17 @@ Key facts: ${data.keyFacts}`;
   }
 }
 
-async function saveBrief(data, summary, timestamp) {
+// Returns true on success, false on failure.
+// Uses submission_id for idempotency — add a UNIQUE constraint on that column
+// in Supabase so retries after email failure don't create duplicate records.
+async function saveBrief(data, summary, timestamp, submissionId) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     const { error } = await supabase.from('briefs').insert({
+      submission_id: submissionId,
       created_at: timestamp,
       your_name: data.yourName,
       firm_name: data.firmName || null,
@@ -115,16 +119,27 @@ async function saveBrief(data, summary, timestamp) {
       status: 'new',
       staff_notes: null,
     });
-    if (error) console.error('Supabase insert error:', error.message);
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      return false;
+    }
+    return true;
   } catch (err) {
     console.error('Supabase unavailable:', err.message);
+    return false;
   }
 }
 
-// When TEST_EMAIL_OVERRIDE is set, all outbound email is redirected there.
-// Remove this env var in production to use real addresses.
+// Blocked on VERCEL_ENV=production so TEST_EMAIL_OVERRIDE can never leak
+// confidential brief data to a personal inbox in live deployments.
 function resolveEmail(address) {
-  return process.env.TEST_EMAIL_OVERRIDE || address;
+  if (process.env.TEST_EMAIL_OVERRIDE) {
+    if (process.env.VERCEL_ENV === 'production') {
+      throw new Error('TEST_EMAIL_OVERRIDE must not be set in production');
+    }
+    return process.env.TEST_EMAIL_OVERRIDE;
+  }
+  return address;
 }
 
 function buildBarristerHtml(data, summary, timestamp) {
@@ -214,8 +229,13 @@ async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
-    .split(',')[0].trim();
+  // x-real-ip is set by Vercel's infrastructure and cannot be spoofed by the client
+  const ip = (
+    req.headers['x-real-ip'] ||
+    req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+    req.socket?.remoteAddress ||
+    'unknown'
+  );
 
   const limited = await checkRateLimit(ip);
   if (limited) {
@@ -229,9 +249,15 @@ async function handler(req, res) {
   if (validationError) return res.status(400).json(validationError);
 
   const timestamp = new Date().toISOString();
+  const submissionId = crypto.randomUUID();
   const summary = await generateSummary(body);
 
-  await saveBrief(body, summary, timestamp);
+  const saved = await saveBrief(body, summary, timestamp, submissionId);
+  if (!saved) {
+    return res.status(500).json({
+      error: 'Submission failed. Please email mklooster@chambers.net.au directly.',
+    });
+  }
 
   try {
     await sendBarristerEmail(body, summary, timestamp);
@@ -250,6 +276,7 @@ module.exports = handler;
 module.exports.validateBody = validateBody;
 module.exports.checkRateLimit = checkRateLimit;
 module.exports.generateSummary = generateSummary;
+module.exports.saveBrief = saveBrief;
 module.exports.sendBarristerEmail = sendBarristerEmail;
 module.exports.sendConfirmationEmail = sendConfirmationEmail;
 module.exports.escHtml = escHtml;

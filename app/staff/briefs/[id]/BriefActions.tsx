@@ -48,8 +48,22 @@ export default function BriefActions({
 
   async function handleStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const next = e.target.value
+    const previous = status
+    // Optimistically update UI, roll back if the save fails
     setStatus(next)
-    await save({ status: next })
+    try {
+      const res = await fetch(`/api/staff/briefs/${briefId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setStatus(previous)
+      setError('Could not update status. Try again.')
+    }
   }
 
   return (

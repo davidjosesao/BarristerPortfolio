@@ -34,7 +34,9 @@ export default async function BriefDetailPage({ params }: { params: { id: string
     .eq('id', params.id)
     .single()
 
-  if (error || !brief) notFound()
+  // Only treat a "no rows" result as 404 — real DB/permission errors should surface
+  if (!brief) notFound()
+  if (error && error.code !== 'PGRST116') throw new Error(error.message)
 
   const submitted = new Date(brief.created_at).toLocaleString('en-AU', {
     day: '2-digit', month: 'long', year: 'numeric',

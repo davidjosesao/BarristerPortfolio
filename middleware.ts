@@ -29,13 +29,22 @@ export async function middleware(request: NextRequest) {
   if (!user && pathname.startsWith('/staff') && pathname !== '/staff/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/staff/login'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    // Carry refreshed session cookies so Supabase auth state survives the redirect
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return redirectResponse
   }
 
   if (user && pathname === '/staff/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/staff/briefs'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return redirectResponse
   }
 
   return supabaseResponse
