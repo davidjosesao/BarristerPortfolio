@@ -1,7 +1,8 @@
 'use strict';
 
 const { kv } = require('@vercel/kv');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 
 const REQUIRED_FIELDS = ['yourName', 'yourEmail', 'parties', 'court', 'jurisdiction', 'matterType', 'urgency', 'keyFacts'];
@@ -55,7 +56,7 @@ async function checkRateLimit(ip) {
   }
 }
 
-const SYSTEM_PROMPT = `You are a legal assistant helping a barrister quickly understand an incoming brief.
+const SUMMARY_PROMPT = `You are a legal assistant helping a barrister quickly understand an incoming brief.
 Summarise the following brief submission in exactly 5 bullet points using plain, precise language.
 The 5 points must be:
 1. Parties — who is involved
@@ -69,8 +70,12 @@ Use "—" as the bullet character.`;
 
 async function generateSummary(data) {
   try {
-    const client = new Anthropic();
-    const userMessage = `Submitter: ${data.yourName}${data.firmName ? `, ${data.firmName}` : ''}
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `${SUMMARY_PROMPT}
+
+Submitter: ${data.yourName}${data.firmName ? `, ${data.firmName}` : ''}
 Parties: ${data.parties}
 Court/tribunal: ${data.court}
 Jurisdiction: ${data.jurisdiction}
@@ -79,35 +84,63 @@ Hearing date: ${data.hearingDate || 'Not set'}
 Urgency: ${data.urgency}
 Key facts: ${data.keyFacts}`;
 
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      temperature: 0,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }],
-    });
-    return message.content[0].text;
+    const result = await model.generateContent(prompt);
+    return result.response.text();
   } catch (err) {
-    console.error('Claude API error:', err.message);
+    console.error('Gemini API error:', err.message);
     return 'AI summary unavailable — see full details below.';
   }
 }
 
+async function saveBrief(data, summary, timestamp) {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const { error } = await supabase.from('briefs').insert({
+      created_at: timestamp,
+      your_name: data.yourName,
+      firm_name: data.firmName || null,
+      your_email: data.yourEmail,
+      your_phone: data.yourPhone || null,
+      parties: data.parties,
+      court: data.court,
+      jurisdiction: data.jurisdiction,
+      matter_type: data.matterType,
+      urgency: data.urgency,
+      hearing_date: data.hearingDate || null,
+      key_facts: data.keyFacts,
+      ai_summary: summary,
+      status: 'new',
+      staff_notes: null,
+    });
+    if (error) console.error('Supabase insert error:', error.message);
+  } catch (err) {
+    console.error('Supabase unavailable:', err.message);
+  }
+}
+
+// When TEST_EMAIL_OVERRIDE is set, all outbound email is redirected there.
+// Remove this env var in production to use real addresses.
+function resolveEmail(address) {
+  return process.env.TEST_EMAIL_OVERRIDE || address;
+}
+
 function buildBarristerHtml(data, summary, timestamp) {
-  const name       = escHtml(data.yourName);
-  const firm       = data.firmName ? escHtml(data.firmName) : '—';
-  const email      = escHtml(data.yourEmail);
-  const phone      = data.yourPhone ? escHtml(data.yourPhone) : '—';
-  const parties    = escHtml(data.parties);
-  const court      = escHtml(data.court);
-  const juris      = escHtml(data.jurisdiction);
-  const matter     = escHtml(data.matterType);
-  const hearing    = data.hearingDate ? escHtml(data.hearingDate) : 'Not set';
-  const urgency    = escHtml(data.urgency);
-  const facts      = escHtml(data.keyFacts);
-  const ts         = escHtml(timestamp);
-  // summary comes from Claude — escape defensively in case of unexpected output
-  const safeSum    = escHtml(summary);
+  const name    = escHtml(data.yourName);
+  const firm    = data.firmName ? escHtml(data.firmName) : '—';
+  const email   = escHtml(data.yourEmail);
+  const phone   = data.yourPhone ? escHtml(data.yourPhone) : '—';
+  const parties = escHtml(data.parties);
+  const court   = escHtml(data.court);
+  const juris   = escHtml(data.jurisdiction);
+  const matter  = escHtml(data.matterType);
+  const hearing = data.hearingDate ? escHtml(data.hearingDate) : 'Not set';
+  const urgency = escHtml(data.urgency);
+  const facts   = escHtml(data.keyFacts);
+  const ts      = escHtml(timestamp);
+  const safeSum = escHtml(summary);
 
   return `<h2 style="font-family: Georgia, serif; font-size: 20px; color: #1C1C1A; margin-bottom: 4px;">New brief submission</h2>
 <p style="font-size: 13px; color: #6B6B67; margin-top: 0;">Received ${ts} · Submitted by ${name}</p>
@@ -137,11 +170,13 @@ async function sendBarristerEmail(data, summary, timestamp) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const payload = {
     from: process.env.FROM_EMAIL,
-    to: process.env.RECIPIENT_EMAIL,
+    to: resolveEmail(process.env.RECIPIENT_EMAIL),
     subject: `New brief — ${data.matterType} · ${data.parties} · ${data.urgency}`,
     html: buildBarristerHtml(data, summary, timestamp),
   };
-  if (process.env.CLERK_EMAIL) payload.bcc = process.env.CLERK_EMAIL;
+  if (process.env.CLERK_EMAIL && !process.env.TEST_EMAIL_OVERRIDE) {
+    payload.bcc = process.env.CLERK_EMAIL;
+  }
   await resend.emails.send(payload);
 }
 
@@ -149,7 +184,7 @@ async function sendConfirmationEmail(data, timestamp) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: process.env.FROM_EMAIL,
-    to: data.yourEmail,
+    to: resolveEmail(data.yourEmail),
     subject: 'Brief received — Michael Klooster',
     text: `Hi ${data.yourName},
 
@@ -195,6 +230,8 @@ async function handler(req, res) {
 
   const timestamp = new Date().toISOString();
   const summary = await generateSummary(body);
+
+  await saveBrief(body, summary, timestamp);
 
   try {
     await sendBarristerEmail(body, summary, timestamp);
