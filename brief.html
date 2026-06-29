@@ -24,6 +24,12 @@
 
     ::selection { background: rgba(232,229,223,0.18); }
 
+    :focus-visible {
+      outline: 1px solid rgba(232,229,223,0.45);
+      outline-offset: 3px;
+      border-radius: 2px;
+    }
+
     body {
       background: var(--bg);
       color: var(--cream);
@@ -86,8 +92,12 @@
       align-items: center;
       gap: 7px;
     }
-    .nav-back:hover { color: var(--gold); }
-    .nav-back svg { flex-shrink: 0; }
+    .nav-back:hover { color: var(--cream); }
+    .nav-back svg {
+      flex-shrink: 0;
+      transition: transform 0.35s var(--ease);
+    }
+    .nav-back:hover svg { transform: translateX(-3px); }
     .nav-name {
       font-size: 11px;
       font-weight: 500;
@@ -180,8 +190,10 @@
     .field input:focus,
     .field select:focus,
     .field textarea:focus {
-      border-color: rgba(237,232,222,0.55);
-      background: rgba(255,255,255,0.04);
+      border-color: rgba(237,232,222,0.6);
+      background: rgba(255,255,255,0.045);
+      outline: none;
+      box-shadow: 0 0 0 1px rgba(232,229,223,0.08);
     }
     .field input.invalid,
     .field select.invalid,
@@ -259,6 +271,13 @@
       border-radius: 3px;
       background: rgba(232,229,223,0.04);
       margin-top: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+    }
+    .form-success.is-visible {
+      opacity: 1;
+      transform: translateY(0);
     }
     .form-success-icon {
       width: 36px;
@@ -662,6 +681,11 @@
         form.style.display = 'none';
         confirmEl.textContent = email;
         successEl.style.display = 'block';
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            successEl.classList.add('is-visible');
+          });
+        });
       })
       .catch(function(err) {
         errorEl.style.display = 'block';
