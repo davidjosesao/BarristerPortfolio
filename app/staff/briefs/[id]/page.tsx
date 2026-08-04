@@ -22,8 +22,9 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   )
 }
 
-export default async function BriefDetailPage({ params }: { params: { id: string } }) {
-  const supabase = createClient()
+export default async function BriefDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/staff/login')
@@ -31,7 +32,7 @@ export default async function BriefDetailPage({ params }: { params: { id: string
   const { data: brief, error } = await supabase
     .from('briefs')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   // Only treat a "no rows" result as 404 — real DB/permission errors should surface

@@ -9,9 +9,10 @@ const MAX_NOTES_LENGTH = 4000
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = createClient()
+  const { id } = await params
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -63,7 +64,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from('briefs')
     .update(update)
-    .eq('id', params.id)
+    .eq('id', id)
     .select('id')
     .single()
 
