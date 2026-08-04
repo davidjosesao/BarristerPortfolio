@@ -7,7 +7,7 @@ const {
   saveBrief,
   sendBarristerEmail,
   sendConfirmationEmail,
-} = require('../../../api/submit-brief')
+} = require('../../../lib/submit-brief')
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -19,6 +19,10 @@ export async function OPTIONS() {
     },
   })
 }
+
+// Gemini summarisation plus two Resend calls can outrun the default budget.
+// Set here rather than in vercel.json so it travels with the route.
+export const maxDuration = 30
 
 export async function POST(request) {
   // request.ip is populated by Vercel from a trusted internal header
