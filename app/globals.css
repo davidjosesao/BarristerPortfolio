@@ -5,8 +5,10 @@ html { scroll-behavior: smooth; }
   --bg:      #181A1C;
   --surface: #1F2124;
   --text:    #E8E5DF;
-  --muted:   rgba(232,229,223,0.44);
-  --dim:     rgba(232,229,223,0.22);
+  /* Contrast against --bg #181A1C: --muted ≈ 7.4:1, --dim ≈ 4.6:1.
+     Both clear WCAG AA for body text; the old 0.44 / 0.22 values sat near 3:1. */
+  --muted:   rgba(232,229,223,0.72);
+  --dim:     rgba(232,229,223,0.52);
   --rule:    rgba(232,229,223,0.10);
   --gold:    #B4B0A9;
   --cream:   #E8E5DF;
@@ -59,37 +61,64 @@ body {
   padding-top: 4px;
 }
 
-/* ── Nav ── */
-nav {
-  position: sticky;
+/* ── Site header ── */
+.site-header {
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
-  background: rgba(24,26,28,0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  /* Blur is deliberately NOT transitioned — ramping a backdrop-filter from 0
+     is expensive and lets content ghost through mid-ramp. Only the (cheap)
+     background and border fade, and they carry the whole effect. */
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+  will-change: transform;
 }
-.nav-inner {
+/* Only earns its backdrop once content is actually passing beneath it. */
+.site-header.is-condensed {
+  background: rgba(24,26,28,0.92);
+  border-bottom-color: var(--rule);
+}
+.header-inner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 0;
+  padding: 22px 0;
+  transition: padding 0.4s var(--ease);
 }
-.nav-mark {
+.site-header.is-condensed .header-inner { padding: 14px 0; }
+
+/* Shared by the intro and the header — the layoutId morph interpolates
+   between these two sizes, so only font-size differs. */
+.brand-mark {
   font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
   font-style: italic;
-  font-size: 17px;
   color: var(--text);
   text-decoration: none;
   letter-spacing: 0.01em;
-  opacity: 0.85;
+  line-height: 1;
+  white-space: nowrap;
+  display: block;
 }
+.header-brand { font-size: 17px; }
+.intro-brand {
+  font-size: clamp(38px, 7vw, 82px);
+  display: flex;
+  gap: 0.3em;
+}
+
 .nav-links {
   list-style: none;
   display: flex;
   gap: 32px;
+  align-items: center;
 }
-.nav-links a {
+.nav-links li { position: relative; }
+.nav-link {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.14em;
@@ -97,19 +126,25 @@ nav {
   color: var(--muted);
   text-decoration: none;
   transition: color 0.25s;
-  position: relative;
+  display: block;
+  padding-bottom: 5px;
 }
-.nav-links a::after {
-  content: '';
+.nav-link:hover, .nav-link.is-active { color: var(--text); }
+/* One underline element for the whole nav — it slides between items. */
+.nav-underline {
   position: absolute;
-  left: 0; right: 100%;
-  bottom: -4px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 1px;
   background: var(--text);
-  transition: right 0.35s var(--ease);
 }
-.nav-links a:hover { color: var(--text); }
-.nav-links a:hover::after { right: 0; }
+.header-progress {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+  transform-origin: 0%;
+  opacity: 0.55;
+}
 
 main, footer { position: relative; z-index: 1; }
 hr { border: none; border-top: 1px solid var(--rule); }
@@ -136,10 +171,13 @@ hr { border: none; border-top: 1px solid var(--rule); }
 
 /* ── Hero ── */
 #hero {
-  padding: 120px 0 104px;
+  /* Clears the fixed header (~66px) plus the original 120px of breathing room. */
+  padding: 186px 0 104px;
   border-bottom: 1px solid var(--rule);
   position: relative;
 }
+/* Anchor targets must clear the fixed header when jumped to. */
+#profile, #brief-cta, #contact { scroll-margin-top: 80px; }
 .hero-inner {
   display: grid;
   grid-template-columns: 1fr 232px;
@@ -315,26 +353,6 @@ hr { border: none; border-top: 1px solid var(--rule); }
 
 /* ── Brief CTA ── */
 #brief-cta { padding: 88px 0; border-bottom: 1px solid var(--rule); }
-.brief-monogram {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.brief-monogram-text {
-  font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
-  font-style: italic;
-  font-size: 480px;
-  line-height: 1;
-  color: rgba(232,229,223,0.042);
-  white-space: nowrap;
-  letter-spacing: -0.06em;
-  transform: translateY(4%);
-}
 .brief-cta-row {
   display: flex;
   justify-content: space-between;
@@ -390,66 +408,39 @@ footer { padding: 88px 0 56px; }
   letter-spacing: 0.03em;
 }
 
-/* ── Splash ── */
-#splash {
+/* ── Intro ── */
+#intro {
   position: fixed;
   inset: 0;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: all;
+  background: var(--bg);
 }
-#splash-bg {
-  position: absolute;
-  inset: 0;
-  background: #181A1C;
-  z-index: 0;
-}
-#splash-glow {
+#intro-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
   background: radial-gradient(
     ellipse 60% 44% at 50% 50%,
     rgba(232,229,223,0.036) 0%,
     transparent 70%
   );
 }
-#splash-names {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.44em;
-  font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
-  font-style: italic;
-  font-size: clamp(60px, 8.5vw, 104px);
-  color: #E8E5DF;
-  letter-spacing: 0.01em;
-  line-height: 1;
-  white-space: nowrap;
+/* Each word is clipped to its own box so the glyphs wipe up from the baseline
+   instead of being typed out character by character. */
+.mask-line {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* Descenders would otherwise be shaved off by the clip. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.mask-line-inner {
+  display: inline-block;
   will-change: transform;
-}
-#sn-first, #sn-last {
-  display: inline-block;
-  will-change: transform, opacity;
-}
-.splash-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 0.68em;
-  background: rgba(232,229,223,0.85);
-  vertical-align: baseline;
-  position: relative;
-  bottom: 0;
-  margin-left: 3px;
-  animation: spl-blink 0.6s step-end infinite;
-}
-@keyframes spl-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
 }
 
 /* ── Brief page ── */
@@ -671,6 +662,11 @@ footer { padding: 88px 0 56px; }
   .col-narrow { padding: 0 20px; }
   .hero-inner { grid-template-columns: 1fr; gap: 36px; }
   .hero-photo { width: 148px; height: 190px; }
+  /* The brand mark alone would crowd the links at this width. */
+  .header-brand { font-size: 15px; }
+  .nav-links { gap: 18px; }
+  .nav-link { font-size: 10px; letter-spacing: 0.1em; }
+  #hero { padding-top: 150px; }
   .footer-grid { grid-template-columns: 1fr; gap: 32px; }
   #hero { padding: 64px 0; }
   #profile, #brief-cta { padding: 56px 0; }
@@ -683,5 +679,11 @@ footer { padding: 88px 0 56px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #splash { display: none !important; }
+  #intro { display: none !important; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -30,7 +30,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function BriefsListPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/staff/login')
@@ -43,7 +43,7 @@ export default async function BriefsListPage() {
   async function handleSignOut() {
     'use server'
     const { createClient: mkClient } = await import('../../../lib/supabase/server')
-    const sb = mkClient()
+    const sb = await mkClient()
     await sb.auth.signOut()
     redirect('/staff/login')
   }
