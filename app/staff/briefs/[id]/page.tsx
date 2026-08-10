@@ -2,6 +2,8 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase/server'
 import { StaffHeader } from '../../StaffHeader'
 import BriefActions from './BriefActions'
+import FeesPanel, { type Fee } from './FeesPanel'
+import { formatChambersDateTime, formatHearingDate } from '../../../../lib/chambers-time'
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null
@@ -39,10 +41,18 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
   if (!brief) notFound()
   if (error && error.code !== 'PGRST116') throw new Error(error.message)
 
-  const submitted = new Date(brief.created_at).toLocaleString('en-AU', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-  })
+  // Deliberately non-fatal: until supabase/schema.sql has been re-run the
+  // `fees` table does not exist, and a brief should still be readable rather
+  // than 500-ing the whole page over a section that has not been set up yet.
+  const { data: feesData, error: feesError } = await supabase
+    .from('fees')
+    .select('id, fee_type, description, quantity, unit_amount, gst_applicable, gst_rate, amount_ex_gst, gst_amount')
+    .eq('brief_id', id)
+    .order('created_at', { ascending: true })
+
+  const fees = (feesData ?? []) as Fee[]
+
+  const submitted = formatChambersDateTime(brief.created_at)
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -116,7 +126,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
               <Row label="Jurisdiction" value={brief.jurisdiction} />
               <Row label="Matter type" value={brief.matter_type} />
               <Row label="Urgency" value={brief.urgency} />
-              <Row label="Hearing date" value={brief.hearing_date ?? 'Not set'} />
+              <Row label="Hearing date" value={brief.hearing_date ? formatHearingDate(brief.hearing_date) : 'Not set'} />
             </div>
 
             {/* Key facts */}
@@ -126,6 +136,19 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
             <p style={{ fontSize: '14px', color: 'var(--cream)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
               {brief.key_facts}
             </p>
+
+            {/* Fees */}
+            <h2 style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', margin: '40px 0 12px' }}>
+              Fees
+            </h2>
+            {feesError ? (
+              <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.7 }}>
+                Fee tracking is not available yet — run the <code>fees</code> section of{' '}
+                <code>supabase/schema.sql</code> in the Supabase SQL editor to enable it.
+              </p>
+            ) : (
+              <FeesPanel briefId={brief.id} initialFees={fees} />
+            )}
 
           </div>
 

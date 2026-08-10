@@ -92,6 +92,80 @@ create policy "staff can update briefs" on public.briefs
   using (public.is_staff())
   with check (public.is_staff());
 
+-- ── Fees ────────────────────────────────────────────────────────────────────
+-- Fee line items recorded against a brief: the brief fee itself, refreshers
+-- charged per day, hourly work, fixed-fee items, and disbursements paid out on
+-- the client's behalf. Summed to produce a memorandum of fees / tax invoice.
+create table if not exists public.fees (
+  id       uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references public.briefs(id) on delete cascade,
+
+  created_at timestamptz not null default now(),
+
+  fee_type text not null
+             check (fee_type in ('brief_fee', 'daily_rate', 'hourly_rate',
+                                 'fixed_fee', 'disbursement')),
+  description text,
+
+  -- Days for a refresher, hours for hourly work, 1 for anything charged once.
+  -- Fractional by design: half-day refreshers and 0.2h attendances are normal.
+  quantity    numeric(10,2) not null default 1 check (quantity > 0),
+
+  -- Always GST-EXCLUSIVE. Storing tax-inclusive amounts anywhere makes the
+  -- invoice subtotal unreconcilable once mixed with GST-free disbursements.
+  unit_amount numeric(12,2) not null check (unit_amount >= 0),
+
+  -- Court filing fees and similar statutory outlays carry no GST, so this is
+  -- per-line rather than a global setting.
+  gst_applicable boolean not null default true,
+
+  -- The rate is stored on the row, not hardcoded at render time, so that a
+  -- future change to the GST rate cannot silently restate fees already billed.
+  gst_rate numeric(5,4) not null default 0.1000
+             check (gst_rate >= 0 and gst_rate <= 1),
+
+  -- Derived here rather than in TypeScript so every consumer — invoice PDF,
+  -- staff UI, any later report — agrees on the arithmetic and the rounding.
+  -- Generated columns may reference only plain stored columns, hence the
+  -- repeated (quantity * unit_amount) rather than referencing amount_ex_gst.
+  amount_ex_gst numeric(14,2)
+    generated always as (round(quantity * unit_amount, 2)) stored,
+  gst_amount    numeric(14,2)
+    generated always as (
+      case when gst_applicable
+           then round(quantity * unit_amount * gst_rate, 2)
+           else 0
+      end
+    ) stored
+);
+
+create index if not exists fees_brief_id_idx on public.fees (brief_id);
+
+alter table public.fees enable row level security;
+
+-- Unlike briefs, there is no public write path here: fees are only ever
+-- created by staff from the dashboard, so all four verbs are staff-gated.
+drop policy if exists "staff can read fees" on public.fees;
+create policy "staff can read fees" on public.fees
+  for select to authenticated
+  using (public.is_staff());
+
+drop policy if exists "staff can insert fees" on public.fees;
+create policy "staff can insert fees" on public.fees
+  for insert to authenticated
+  with check (public.is_staff());
+
+drop policy if exists "staff can update fees" on public.fees;
+create policy "staff can update fees" on public.fees
+  for update to authenticated
+  using (public.is_staff())
+  with check (public.is_staff());
+
+drop policy if exists "staff can delete fees" on public.fees;
+create policy "staff can delete fees" on public.fees
+  for delete to authenticated
+  using (public.is_staff());
+
 -- ── Seed your staff accounts ────────────────────────────────────────────────
 -- Replace these before running, then create matching users under
 -- Authentication → Users (tick auto-confirm).

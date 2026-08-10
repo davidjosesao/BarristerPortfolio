@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '../../../../../lib/supabase/server'
+import { requireStaff } from '../../../../../lib/staff-auth'
 
 const ALLOWED_STATUSES = new Set(['new', 'reviewed', 'accepted', 'declined'])
 const MAX_NOTES_LENGTH = 4000
@@ -9,24 +9,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
-  }
-
-  // Only the barrister and clerk may update briefs — checked against the same
-  // `staff` table RLS reads from, via the RLS-scoped "staff can read own row"
-  // policy, so there is exactly one place that decides who counts as staff.
-  const { data: staffRow } = await supabase
-    .from('staff')
-    .select('email')
-    .eq('email', user.email)
-    .maybeSingle()
-
-  if (!staffRow) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const auth = await requireStaff()
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   let body: Record<string, unknown>
@@ -66,7 +52,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await auth.supabase
     .from('briefs')
     .update(update)
     .eq('id', id)
