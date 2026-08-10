@@ -147,7 +147,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
                 <code>supabase/schema.sql</code> in the Supabase SQL editor to enable it.
               </p>
             ) : (
-              <FeesPanel briefId={brief.id} initialFees={fees} />
+              <FeesPanel briefId={brief.id} initialFees={fees} initialInvoiceNumber={brief.invoice_number ?? null} />
             )}
 
           </div>

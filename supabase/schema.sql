@@ -166,6 +166,68 @@ create policy "staff can delete fees" on public.fees
   for delete to authenticated
   using (public.is_staff());
 
+-- ── Invoicing ───────────────────────────────────────────────────────────────
+-- An invoice is not a separate document here: a brief becomes invoiced when it
+-- is assigned a number. The PDF is rendered on demand from the fee lines, so
+-- there is nothing to keep in sync.
+alter table public.briefs
+  add column if not exists invoice_number text,
+  add column if not exists invoiced_at    timestamptz;
+
+-- Numbers must be unique across chambers; the constraint is the backstop that
+-- makes the allocation function below safe rather than merely likely-correct.
+-- (Nulls do not collide, so un-invoiced briefs are unaffected.)
+create unique index if not exists briefs_invoice_number_idx
+  on public.briefs (invoice_number)
+  where invoice_number is not null;
+
+create sequence if not exists public.invoice_number_seq start 1;
+
+-- Allocating a number has to be atomic and idempotent:
+--   * atomic, or two clicks in quick succession bill the same matter twice
+--     under different numbers;
+--   * idempotent, or simply re-downloading a PDF burns a fresh number and
+--     leaves gaps in the sequence, which an auditor will ask about.
+-- The SELECT ... FOR UPDATE locks the brief row so concurrent callers queue
+-- behind it and the second one sees the number the first assigned.
+create or replace function public.allocate_invoice_number(p_brief_id uuid)
+returns text
+language plpgsql
+as $$
+declare
+  v_existing text;
+  v_number   text;
+begin
+  select invoice_number into v_existing
+    from public.briefs
+   where id = p_brief_id
+     for update;
+
+  if not found then
+    raise exception 'Brief % not found', p_brief_id using errcode = 'no_data_found';
+  end if;
+
+  if v_existing is not null then
+    return v_existing;
+  end if;
+
+  v_number := 'INV-' || lpad(nextval('public.invoice_number_seq')::text, 5, '0');
+
+  update public.briefs
+     set invoice_number = v_number,
+         invoiced_at    = now()
+   where id = p_brief_id;
+
+  return v_number;
+end;
+$$;
+
+-- Deliberately NOT security definer: it runs as the caller, so the existing
+-- "staff can update briefs" policy still decides who may invoice.
+revoke all on function public.allocate_invoice_number(uuid) from public, anon;
+grant execute on function public.allocate_invoice_number(uuid) to authenticated;
+grant usage on sequence public.invoice_number_seq to authenticated;
+
 -- ── Seed your staff accounts ────────────────────────────────────────────────
 -- Replace these before running, then create matching users under
 -- Authentication → Users (tick auto-confirm).

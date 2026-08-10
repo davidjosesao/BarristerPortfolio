@@ -45,14 +45,18 @@ const LABEL_STYLE: React.CSSProperties = {
 export default function FeesPanel({
   briefId,
   initialFees,
+  initialInvoiceNumber,
 }: {
   briefId: string
   initialFees: Fee[]
+  initialInvoiceNumber: string | null
 }) {
   const [fees, setFees] = useState<Fee[]>(initialFees)
   const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [invoiceNumber, setInvoiceNumber] = useState(initialInvoiceNumber)
+  const [invoicing, setInvoicing] = useState(false)
 
   const [feeType, setFeeType] = useState('brief_fee')
   const [description, setDescription] = useState('')
@@ -112,6 +116,40 @@ export default function FeesPanel({
       setError(e instanceof Error ? e.message : 'Could not add fee')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function generateInvoice() {
+    setInvoicing(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/staff/briefs/${briefId}/invoice`, { method: 'POST' })
+
+      if (!res.ok) {
+        // The error path returns JSON; the success path returns a PDF.
+        const payload = await res.json().catch(() => null)
+        throw new Error(payload?.error ?? 'Could not generate the invoice')
+      }
+
+      const number = res.headers.get('X-Invoice-Number')
+      const blob = await res.blob()
+
+      // Anchor-with-object-URL rather than navigating: keeps the staff page
+      // mounted so the fee list and any unsaved state survive the download.
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${number ?? 'invoice'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+
+      if (number) setInvoiceNumber(number)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not generate the invoice')
+    } finally {
+      setInvoicing(false)
     }
   }
 
@@ -213,6 +251,28 @@ export default function FeesPanel({
 
       {error && (
         <p style={{ fontSize: '13px', color: '#D97C7C', marginBottom: '12px' }}>{error}</p>
+      )}
+
+      {fees.length > 0 && !adding && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '14px',
+          marginBottom: '18px', flexWrap: 'wrap',
+        }}>
+          <button
+            className="btn-submit"
+            onClick={generateInvoice}
+            disabled={invoicing || busy}
+            style={{ padding: '10px 22px', fontSize: '13px' }}
+          >
+            {invoicing ? 'Generating…' : invoiceNumber ? 'Download invoice' : 'Generate invoice'}
+          </button>
+          {invoiceNumber && (
+            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+              Invoiced as <span style={{ color: 'var(--cream)' }}>{invoiceNumber}</span>
+              {' — regenerating reuses this number.'}
+            </span>
+          )}
+        </div>
       )}
 
       {!adding && (
