@@ -60,6 +60,10 @@ export function useIntro() {
   const [playing, setPlaying] = useState(false)
   const [decided, setDecided] = useState(false)
 
+  // `hasSeenIntro()` reads localStorage, which only exists on the client — the
+  // decision has to happen in an effect (not during render) so the first client
+  // render still matches the server-rendered (hidden) markup before this runs.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (prefersReducedMotion || hasSeenIntro()) {
       setDecided(true)
@@ -69,6 +73,7 @@ export function useIntro() {
     setDecided(true)
     document.body.style.overflow = 'hidden'
   }, [prefersReducedMotion])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!playing) return
