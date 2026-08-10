@@ -233,7 +233,13 @@ export default function Home() {
         </div>
       </footer>
       <p className="footer-bottom">
-        <span>© 2026 Michael Klooster · Barrister</span>
+        <span>
+          © 2026 Michael Klooster · Barrister
+          <span className="footer-sep" aria-hidden="true">·</span>
+          {/* Discreet by design — chambers staff only, and not worth signposting
+              to the solicitors this page is actually for. */}
+          <Link href="/staff/login" className="staff-link" rel="nofollow">Staff</Link>
+        </span>
         <span>Liability limited by a scheme approved under Professional Standards Legislation</span>
       </p>
 
