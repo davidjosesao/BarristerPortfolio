@@ -244,6 +244,77 @@ revoke all on function public.allocate_invoice_number(uuid) from public, anon;
 grant execute on function public.allocate_invoice_number(uuid) to authenticated;
 grant usage on sequence public.invoice_number_seq to authenticated;
 
+-- ── AI chronology ───────────────────────────────────────────────────────────
+-- Cached output of the on-demand chronology generation, so opening a brief
+-- does not re-bill the AI provider on every page view. Null means "not
+-- generated yet"; staff can regenerate to overwrite.
+alter table public.briefs
+  add column if not exists chronology            text,
+  add column if not exists chronology_created_at timestamptz;
+
+-- ── Calendar feed tokens ────────────────────────────────────────────────────
+-- Calendar apps (Apple, Google, Outlook) poll a URL on a schedule and cannot
+-- perform an interactive login, so the .ics feed cannot use the session
+-- cookie. Each staff member gets a long random bearer token in the URL
+-- instead. It is effectively a password: anyone holding it can read hearing
+-- dates, which is why it is per-user and can be rotated.
+alter table public.staff
+  add column if not exists calendar_token text;
+
+create unique index if not exists staff_calendar_token_idx
+  on public.staff (calendar_token)
+  where calendar_token is not null;
+
+-- ── Brief share links ───────────────────────────────────────────────────────
+-- A read-only link the barrister can send an instructing solicitor so they can
+-- check progress without an account. The token is the entire credential, so:
+--   * it is generated server-side from a CSPRNG, never derived from the
+--     brief id (which would make every link guessable from any other);
+--   * it can be expired and revoked independently of the brief;
+--   * the public page reads a deliberately narrow column set — staff_notes and
+--     fees are never exposed through it.
+create table if not exists public.brief_shares (
+  id       uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references public.briefs(id) on delete cascade,
+
+  token text not null unique,
+
+  created_at timestamptz not null default now(),
+  created_by text,
+  expires_at timestamptz,
+  revoked_at timestamptz,
+
+  -- Observability for the barrister: "has the solicitor actually opened this?"
+  last_viewed_at timestamptz,
+  view_count     integer not null default 0
+);
+
+create index if not exists brief_shares_brief_id_idx on public.brief_shares (brief_id);
+
+alter table public.brief_shares enable row level security;
+
+-- Staff manage links from the dashboard. The public page does NOT read this
+-- table as `anon` — it goes through the service role in a server route that
+-- checks expiry and revocation itself, so no anon policy exists here and none
+-- should be added. Granting anon read here would expose every token at once.
+drop policy if exists "staff can read shares" on public.brief_shares;
+create policy "staff can read shares" on public.brief_shares
+  for select to authenticated
+  using (public.is_staff());
+
+drop policy if exists "staff can create shares" on public.brief_shares;
+create policy "staff can create shares" on public.brief_shares
+  for insert to authenticated
+  with check (public.is_staff());
+
+drop policy if exists "staff can update shares" on public.brief_shares;
+create policy "staff can update shares" on public.brief_shares
+  for update to authenticated
+  using (public.is_staff())
+  with check (public.is_staff());
+
+grant select, insert, update on public.brief_shares to authenticated;
+
 -- ── Seed your staff accounts ────────────────────────────────────────────────
 -- Replace these before running, then create matching users under
 -- Authentication → Users (tick auto-confirm).

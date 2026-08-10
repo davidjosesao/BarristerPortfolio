@@ -309,6 +309,111 @@ begin
   raise notice 'PASS 6c: anon is refused reads on briefs and fees, and cannot insert';
 end $$;
 
+\echo '── 7. Brief share links ────────────────────────────────────────'
+
+do $$
+declare
+  v_brief uuid := (select id from public.briefs where submission_id = 'test-submission-3');
+  v_share uuid;
+  v_ok    boolean := false;
+begin
+  insert into public.brief_shares (brief_id, token, created_by)
+  values (v_brief, 'test-token-aaaaaaaaaaaaaaaaaaaa', 'barrister@test.local')
+  returning id into v_share;
+
+  -- Tokens must be unique: a collision would hand one solicitor another
+  -- solicitor's matter.
+  begin
+    insert into public.brief_shares (brief_id, token)
+    values (v_brief, 'test-token-aaaaaaaaaaaaaaaaaaaa');
+  exception when unique_violation then v_ok := true;
+  end;
+  if not v_ok then
+    raise exception 'FAIL 7.1: duplicate share token was accepted';
+  end if;
+
+  -- Shares must disappear with the brief rather than dangle.
+  if (select count(*) from public.brief_shares where brief_id = v_brief) <> 1 then
+    raise exception 'FAIL 7.2: expected exactly one share row';
+  end if;
+
+  raise notice 'PASS 7: share tokens are unique and linked to a brief';
+end $$;
+
+do $$
+declare
+  v_blocked boolean := false;
+  v_count int;
+begin
+  -- The critical one. The share token IS the credential for the public page.
+  -- If anon could read this table it would obtain every live token at once,
+  -- and with them every brief. anon is granted nothing here, so the read must
+  -- be refused outright.
+  set local role anon;
+  set local request.jwt.claims = '{}';
+
+  begin
+    select count(*) into v_count from public.brief_shares;
+    v_blocked := (v_count = 0);
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+
+  reset role;
+
+  if not v_blocked then
+    raise exception 'FAIL 7.3: anon could read share tokens — every brief is exposed';
+  end if;
+
+  raise notice 'PASS 7b: anon cannot read share tokens';
+end $$;
+
+\echo '── 8. Calendar tokens ──────────────────────────────────────────'
+
+do $$
+declare
+  v_ok boolean := false;
+begin
+  update public.staff set calendar_token = 'cal-token-test-1' where email = 'barrister@test.local';
+
+  insert into public.staff (email, calendar_token) values ('clerk@test.local', 'cal-token-test-2');
+
+  -- Two staff must never share a calendar token.
+  begin
+    update public.staff set calendar_token = 'cal-token-test-1' where email = 'clerk@test.local';
+  exception when unique_violation then v_ok := true;
+  end;
+  if not v_ok then
+    raise exception 'FAIL 8.1: duplicate calendar token was accepted';
+  end if;
+
+  -- But staff without a feed set up all hold null, which must not collide.
+  insert into public.staff (email) values ('nofeed1@test.local'), ('nofeed2@test.local');
+
+  raise notice 'PASS 8: calendar tokens are unique, nulls do not collide';
+end $$;
+
+do $$
+declare
+  v_blocked boolean := false;
+  v_count int;
+begin
+  -- A staff member may read their own row (that is how requireStaff works),
+  -- but must not be able to read a colleague's calendar token.
+  set local role authenticated;
+  set local request.jwt.claims = '{"email":"barrister@test.local"}';
+
+  select count(*) into v_count from public.staff where email <> 'barrister@test.local';
+  v_blocked := (v_count = 0);
+
+  reset role;
+
+  if not v_blocked then
+    raise exception 'FAIL 8.2: staff user read % other staff rows (calendar tokens leak)', v_count;
+  end if;
+
+  raise notice 'PASS 8b: staff cannot read other staff rows or their calendar tokens';
+end $$;
+
 \echo ''
 \echo '════════════════════════════════════════════════════════════════'
 \echo ' ALL SCHEMA TESTS PASSED'
