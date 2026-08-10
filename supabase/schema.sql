@@ -32,6 +32,13 @@ create policy "staff can read own row" on public.staff
 -- Each grant is limited to the verbs that table actually has a policy for.
 grant select on public.staff to authenticated;
 
+-- The service role bypasses RLS but is still subject to table privileges, and
+-- it too gets none by default on a fresh database. Every server-side path that
+-- has no signed-in user to act as runs through it: brief intake, the calendar
+-- feed's token lookup and the share page. Without these grants a clean deploy
+-- fails at the point a solicitor submits a brief.
+grant select, update on public.staff to service_role;
+
 -- Membership test for use in OTHER tables' policies. SECURITY DEFINER runs it
 -- as the owner, so the staff lookup inside bypasses RLS — without this, every
 -- policy that consults staff would re-enter staff's own policy and recurse.
@@ -104,6 +111,8 @@ create policy "staff can update briefs" on public.briefs
 -- No insert or delete: briefs arrive through the API's service-role client and
 -- are never removed from the dashboard, so those verbs are withheld entirely.
 grant select, update on public.briefs to authenticated;
+-- Intake inserts, and re-inserts on retry via ON CONFLICT, hence update too.
+grant select, insert, update on public.briefs to service_role;
 
 -- ── Fees ────────────────────────────────────────────────────────────────────
 -- Fee line items recorded against a brief: the brief fee itself, refreshers
@@ -314,6 +323,8 @@ create policy "staff can update shares" on public.brief_shares
   with check (public.is_staff());
 
 grant select, insert, update on public.brief_shares to authenticated;
+-- The public share page resolves the token and stamps the view counter.
+grant select, update on public.brief_shares to service_role;
 
 -- ── Seed your staff accounts ────────────────────────────────────────────────
 -- Replace these before running, then create matching users under

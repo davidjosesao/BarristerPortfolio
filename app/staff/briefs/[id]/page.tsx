@@ -3,6 +3,8 @@ import { createClient } from '../../../../lib/supabase/server'
 import { StaffHeader } from '../../StaffHeader'
 import BriefActions from './BriefActions'
 import FeesPanel, { type Fee } from './FeesPanel'
+import SharePanel, { type Share } from './SharePanel'
+import ChronologyPanel from './ChronologyPanel'
 import { formatChambersDateTime, formatHearingDate } from '../../../../lib/chambers-time'
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -51,6 +53,16 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
     .order('created_at', { ascending: true })
 
   const fees = (feesData ?? []) as Fee[]
+
+  // Same non-fatal treatment as fees: the brief must stay readable before the
+  // brief_shares migration has been run.
+  const { data: sharesData, error: sharesError } = await supabase
+    .from('brief_shares')
+    .select('id, token, created_at, created_by, expires_at, revoked_at, last_viewed_at, view_count')
+    .eq('brief_id', id)
+    .order('created_at', { ascending: false })
+
+  const shares = (sharesData ?? []) as Share[]
 
   const submitted = formatChambersDateTime(brief.created_at)
 
@@ -137,6 +149,12 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
               {brief.key_facts}
             </p>
 
+            {/* Chronology + AI questions */}
+            <h2 style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', margin: '40px 0 12px' }}>
+              Analysis
+            </h2>
+            <ChronologyPanel briefId={brief.id} initialChronology={brief.chronology ?? null} />
+
             {/* Fees */}
             <h2 style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', margin: '40px 0 12px' }}>
               Fees
@@ -148,6 +166,19 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
               </p>
             ) : (
               <FeesPanel briefId={brief.id} initialFees={fees} initialInvoiceNumber={brief.invoice_number ?? null} />
+            )}
+
+            {/* Share link */}
+            <h2 style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', margin: '40px 0 12px' }}>
+              Share with solicitor
+            </h2>
+            {sharesError ? (
+              <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.7 }}>
+                Share links are not available yet — run the <code>brief_shares</code> section
+                of <code>supabase/schema.sql</code> in the Supabase SQL editor to enable them.
+              </p>
+            ) : (
+              <SharePanel briefId={brief.id} initialShares={shares} />
             )}
 
           </div>

@@ -28,6 +28,7 @@ export function StaffHeader({
               <nav className="staff-nav">
                 <Link href="/staff/briefs" className="staff-nav-link">Briefs</Link>
                 <Link href="/staff/deadlines" className="staff-nav-link">Deadlines</Link>
+                <Link href="/staff/settings" className="staff-nav-link">Settings</Link>
               </nav>
             </div>
             <div className="staff-header-account">
