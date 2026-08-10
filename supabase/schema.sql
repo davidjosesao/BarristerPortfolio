@@ -23,6 +23,15 @@ create policy "staff can read own row" on public.staff
   for select to authenticated
   using (email = auth.jwt() ->> 'email');
 
+-- RLS filters rows; it cannot grant access to the table in the first place.
+-- Without an explicit GRANT the policies below can never match, because the
+-- role is refused at the table level before any policy is consulted. Hosted
+-- Supabase projects usually have ambient default privileges that mask this,
+-- but relying on them makes the schema unreproducible — running it against a
+-- fresh database produced "permission denied for table briefs".
+-- Each grant is limited to the verbs that table actually has a policy for.
+grant select on public.staff to authenticated;
+
 -- Membership test for use in OTHER tables' policies. SECURITY DEFINER runs it
 -- as the owner, so the staff lookup inside bypasses RLS — without this, every
 -- policy that consults staff would re-enter staff's own policy and recurse.
@@ -91,6 +100,10 @@ create policy "staff can update briefs" on public.briefs
   for update to authenticated
   using (public.is_staff())
   with check (public.is_staff());
+
+-- No insert or delete: briefs arrive through the API's service-role client and
+-- are never removed from the dashboard, so those verbs are withheld entirely.
+grant select, update on public.briefs to authenticated;
 
 -- ── Fees ────────────────────────────────────────────────────────────────────
 -- Fee line items recorded against a brief: the brief fee itself, refreshers
@@ -165,6 +178,9 @@ drop policy if exists "staff can delete fees" on public.fees;
 create policy "staff can delete fees" on public.fees
   for delete to authenticated
   using (public.is_staff());
+
+-- All four verbs here, matching the four policies above.
+grant select, insert, update, delete on public.fees to authenticated;
 
 -- ── Invoicing ───────────────────────────────────────────────────────────────
 -- An invoice is not a separate document here: a brief becomes invoiced when it
