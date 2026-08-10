@@ -503,11 +503,18 @@ footer { padding: 88px 0 56px; }
 }
 .staff-header-account {
   display: flex;
-  align-items: center;
-  gap: 28px;
+  align-items: baseline;
+  gap: 8px;
 }
-.staff-email {
+/* Email and Sign out read as one line of text, not two separately-styled
+   controls — same size, weight, case and colour, split only by the dot. */
+.staff-email,
+.staff-signout {
+  font-family: inherit;
   font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--muted);
 }
 .staff-signout {
@@ -515,15 +522,10 @@ footer { padding: 88px 0 56px; }
   border: none;
   cursor: pointer;
   padding: 0;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
   transition: color 0.2s;
 }
 .staff-signout:hover { color: var(--text); }
+.staff-header-sep { color: var(--rule); }
 /* The breadcrumb row a nested page (e.g. a single brief) adds beneath the
    header — same visual language as .nav-back below, just scoped to /staff. */
 .staff-subnav {

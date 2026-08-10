@@ -26,7 +26,8 @@ export function StaffHeader({
             </Link>
             <div className="staff-header-account">
               <span className="staff-email">{email}</span>
-              <form action={signOut}>
+              <span className="staff-header-sep" aria-hidden="true">·</span>
+              <form action={signOut} style={{ display: 'contents' }}>
                 <button type="submit" className="staff-signout">
                   Sign out
                 </button>
