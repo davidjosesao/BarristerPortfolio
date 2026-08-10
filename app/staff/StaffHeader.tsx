@@ -21,9 +21,15 @@ export function StaffHeader({
       <div className="staff-header-inner">
         <div className="col">
           <div className="staff-header-row">
-            <Link href="/staff/briefs" className="staff-brand">
-              Chambers Staff
-            </Link>
+            <div className="staff-header-brand-group">
+              <Link href="/staff/briefs" className="staff-brand">
+                Chambers Staff
+              </Link>
+              <nav className="staff-nav">
+                <Link href="/staff/briefs" className="staff-nav-link">Briefs</Link>
+                <Link href="/staff/deadlines" className="staff-nav-link">Deadlines</Link>
+              </nav>
+            </div>
             <div className="staff-header-account">
               <span className="staff-email">{email}</span>
               <span className="staff-header-sep" aria-hidden="true">·</span>

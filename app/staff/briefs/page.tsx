@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../../../lib/supabase/server'
 import { StaffHeader } from '../StaffHeader'
 import BriefRow from './BriefRow'
+import { formatChambersDate } from '../../../lib/chambers-time'
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string }> = {
   new:      { color: '#E8C97A', bg: 'rgba(232,201,122,0.08)', border: 'rgba(232,201,122,0.25)' },
@@ -82,7 +83,7 @@ export default async function BriefsListPage() {
             {briefs.map((b, i) => (
               <BriefRow key={b.id} href={`/staff/briefs/${b.id}`} isLast={i === briefs.length - 1}>
                 <span style={{ fontSize: '13px', color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
-                  {new Date(b.created_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  {formatChambersDate(b.created_at)}
                 </span>
                 <div>
                   <span style={{ fontSize: '14px', color: 'var(--cream)', display: 'block' }}>{b.parties}</span>
