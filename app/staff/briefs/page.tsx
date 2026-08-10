@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '../../../lib/supabase/server'
+import { StaffHeader } from '../StaffHeader'
 import BriefRow from './BriefRow'
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string }> = {
@@ -40,42 +41,10 @@ export default async function BriefsListPage() {
     .select('id, created_at, parties, court, matter_type, urgency, status, your_name')
     .order('created_at', { ascending: false })
 
-  async function handleSignOut() {
-    'use server'
-    const { createClient: mkClient } = await import('../../../lib/supabase/server')
-    const sb = await mkClient()
-    await sb.auth.signOut()
-    redirect('/staff/login')
-  }
-
   return (
     <div style={{ minHeight: '100vh' }}>
 
-      {/* Nav */}
-      <div className="nav-brief-inner">
-        <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '0 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-garamond, EB Garamond, Georgia, serif)', fontStyle: 'italic', fontSize: '17px', color: 'var(--text)', opacity: 0.85 }}>
-            Chambers Staff
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-            {/* Addresses are case-sensitive to read and were being uppercased
-                with tracking applied, which made them hard to scan. */}
-            <span style={{ fontSize: '13px', color: 'var(--muted)' }}>
-              {user.email}
-            </span>
-            <form action={handleSignOut}>
-              <button type="submit" style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: 'var(--muted)',
-                transition: 'color 0.2s', padding: 0,
-              }}>
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
+      <StaffHeader email={user.email ?? ''} />
 
       <main style={{ maxWidth: '1040px', margin: '0 auto', padding: '56px 48px 80px' }}>
 

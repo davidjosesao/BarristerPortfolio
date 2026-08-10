@@ -473,6 +473,64 @@ footer { padding: 88px 0 56px; }
   border-bottom: 1px solid var(--rule);
   padding: 16px 0;
 }
+/* ── Staff header ── */
+/* One definition, shared by every /staff page via <StaffHeader> — this is
+   what keeps the brand mark, email and sign-out at identical size/position
+   everywhere instead of drifting per page. */
+.staff-header-inner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(11,13,17,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rule);
+}
+.staff-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+}
+.staff-brand {
+  font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  opacity: 0.85;
+}
+.staff-header-account {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.staff-email {
+  font-size: 13px;
+  color: var(--muted);
+}
+.staff-signout {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+.staff-signout:hover { color: var(--text); }
+/* The breadcrumb row a nested page (e.g. a single brief) adds beneath the
+   header — same visual language as .nav-back below, just scoped to /staff. */
+.staff-subnav {
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+}
+
 .nav-back {
   font-size: 11px;
   font-weight: 500;

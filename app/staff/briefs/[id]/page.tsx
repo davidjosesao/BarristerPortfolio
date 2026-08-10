@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '../../../../lib/supabase/server'
+import { StaffHeader } from '../../StaffHeader'
 import BriefActions from './BriefActions'
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -47,18 +47,10 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
   return (
     <div style={{ minHeight: '100vh' }}>
 
-      {/* Nav */}
-      <div className="nav-brief-inner">
-        <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '0 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/staff/briefs" className="nav-back">
-            <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden="true">
-              <path d="M5 1L1 5l4 4M1 5h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            All briefs
-          </Link>
-          <span className="nav-name">Brief detail</span>
-        </div>
-      </div>
+      <StaffHeader
+        email={user.email ?? ''}
+        back={{ href: '/staff/briefs', label: 'All briefs' }}
+      />
 
       <main style={{ maxWidth: '1040px', margin: '0 auto', padding: '56px 48px 80px' }}>
 
