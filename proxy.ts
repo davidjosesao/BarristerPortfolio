@@ -1,12 +1,25 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Without Supabase configured we cannot verify anyone, so fail closed with a
+  // legible message rather than throwing — an unconfigured deployment used to
+  // surface as an opaque MIDDLEWARE_INVOCATION_FAILED 500 on every staff route.
+  if (!supabaseUrl || !supabaseKey) {
+    return new NextResponse(
+      'Staff area unavailable: Supabase environment variables are not configured.',
+      { status: 503, headers: { 'content-type': 'text/plain' } },
+    )
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
