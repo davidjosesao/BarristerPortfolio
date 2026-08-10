@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server'
 import { createClient } from '../../../../../lib/supabase/server'
 
 const ALLOWED_STATUSES = new Set(['new', 'reviewed', 'accepted', 'declined'])
-const STAFF_EMAILS = new Set(
-  [process.env.RECIPIENT_EMAIL, process.env.CLERK_EMAIL].filter(Boolean)
-)
 const MAX_NOTES_LENGTH = 4000
 
 export async function PATCH(
@@ -19,8 +16,16 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
   }
 
-  // Only the barrister and clerk may update briefs
-  if (!STAFF_EMAILS.has(user.email)) {
+  // Only the barrister and clerk may update briefs — checked against the same
+  // `staff` table RLS reads from, via the RLS-scoped "staff can read own row"
+  // policy, so there is exactly one place that decides who counts as staff.
+  const { data: staffRow } = await supabase
+    .from('staff')
+    .select('email')
+    .eq('email', user.email)
+    .maybeSingle()
+
+  if (!staffRow) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
