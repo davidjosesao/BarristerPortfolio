@@ -58,7 +58,9 @@ export default async function BriefsListPage() {
             Chambers Staff
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-            <span style={{ fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            {/* Addresses are case-sensitive to read and were being uppercased
+                with tracking applied, which made them hard to scan. */}
+            <span style={{ fontSize: '13px', color: 'var(--muted)' }}>
               {user.email}
             </span>
             <form action={handleSignOut}>

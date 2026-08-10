@@ -14,12 +14,32 @@ create table if not exists public.staff (
 
 alter table public.staff enable row level security;
 
--- Staff may see the roster (so the app can check itself); nobody may edit it
--- from the client. Manage rows from the Supabase dashboard.
+-- A policy ON staff must never itself query staff — that recurses forever
+-- ("infinite recursion detected in policy for relation staff"). Comparing the
+-- row's own column to the JWT touches no other row, so it terminates.
 drop policy if exists "staff can read roster" on public.staff;
-create policy "staff can read roster" on public.staff
+drop policy if exists "staff can read own row" on public.staff;
+create policy "staff can read own row" on public.staff
   for select to authenticated
-  using (auth.jwt() ->> 'email' in (select email from public.staff));
+  using (email = auth.jwt() ->> 'email');
+
+-- Membership test for use in OTHER tables' policies. SECURITY DEFINER runs it
+-- as the owner, so the staff lookup inside bypasses RLS — without this, every
+-- policy that consults staff would re-enter staff's own policy and recurse.
+create or replace function public.is_staff()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.staff where email = auth.jwt() ->> 'email'
+  );
+$$;
+
+revoke all on function public.is_staff() from public, anon;
+grant execute on function public.is_staff() to authenticated;
 
 -- ── Briefs ──────────────────────────────────────────────────────────────────
 create table if not exists public.briefs (
@@ -64,13 +84,13 @@ alter table public.briefs enable row level security;
 drop policy if exists "staff can read briefs" on public.briefs;
 create policy "staff can read briefs" on public.briefs
   for select to authenticated
-  using (auth.jwt() ->> 'email' in (select email from public.staff));
+  using (public.is_staff());
 
 drop policy if exists "staff can update briefs" on public.briefs;
 create policy "staff can update briefs" on public.briefs
   for update to authenticated
-  using (auth.jwt() ->> 'email' in (select email from public.staff))
-  with check (auth.jwt() ->> 'email' in (select email from public.staff));
+  using (public.is_staff())
+  with check (public.is_staff());
 
 -- ── Seed your staff accounts ────────────────────────────────────────────────
 -- Replace these before running, then create matching users under
