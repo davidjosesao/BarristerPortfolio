@@ -1,55 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '../../../lib/supabase/server'
 import { StaffHeader } from '../StaffHeader'
-import DeadlineRow from './DeadlineRow'
-import { parseHearingDate, daysUntil, todayInChambers } from '../../../lib/chambers-time'
-
-const STATUS_STYLES: Record<string, { color: string; bg: string; border: string }> = {
-  new:      { color: '#E8C97A', bg: 'rgba(232,201,122,0.08)', border: 'rgba(232,201,122,0.25)' },
-  reviewed: { color: '#B4B0A9', bg: 'rgba(180,176,169,0.08)', border: 'rgba(180,176,169,0.2)' },
-  accepted: { color: '#7AC8A0', bg: 'rgba(122,200,160,0.08)', border: 'rgba(122,200,160,0.25)' },
-  declined: { color: '#D97C7C', bg: 'rgba(217,124,124,0.08)', border: 'rgba(217,124,124,0.2)' },
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLES[status] ?? STATUS_STYLES.reviewed
-  return (
-    <span style={{
-      fontSize: '11px',
-      fontWeight: 500,
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
-      color: s.color,
-      background: s.bg,
-      border: `1px solid ${s.border}`,
-      borderRadius: '3px',
-      padding: '3px 8px',
-      whiteSpace: 'nowrap',
-    }}>
-      {status}
-    </span>
-  )
-}
-
-function UrgencyBadge({ label, color }: { label: string; color: string }) {
-  return (
-    <span style={{
-      fontSize: '11px',
-      fontWeight: 500,
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
-      color,
-      background: `${color}14`,
-      border: `1px solid ${color}40`,
-      borderRadius: '3px',
-      padding: '3px 8px',
-      whiteSpace: 'nowrap',
-      marginLeft: '8px',
-    }}>
-      {label}
-    </span>
-  )
-}
+import DeadlinesView from './DeadlinesView'
+import { todayInChambers } from '../../../lib/chambers-time'
 
 export default async function DeadlinesPage() {
   const supabase = await createClient()
@@ -64,8 +17,12 @@ export default async function DeadlinesPage() {
     .order('hearing_date', { ascending: true })
 
   // Resolved once per request, in the chambers' timezone rather than the
-  // server's — see lib/chambers-time.ts.
+  // server's — see lib/chambers-time.ts. Passed down as a plain date string
+  // since the client component re-derives "today" in the browser's own zone
+  // for calendar-grid math, but needs the chambers date for the "is this
+  // overdue" comparisons that mirror the server logic.
   const today = todayInChambers()
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -90,47 +47,19 @@ export default async function DeadlinesPage() {
         )}
 
         {briefs && briefs.length > 0 && (
-          <div style={{ border: '1px solid var(--rule)', borderRadius: '4px', overflow: 'hidden' }}>
-            {/* Header row */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '190px 1fr 160px 110px 100px 32px',
-              gap: '16px',
-              padding: '10px 20px',
-              borderBottom: '1px solid var(--rule)',
-              background: 'rgba(255,255,255,0.02)',
-            }}>
-              {['Hearing date', 'Parties', 'Court', 'Matter', 'Status', ''].map(h => (
-                <span key={h} style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>{h}</span>
-              ))}
-            </div>
-
-            {briefs.map((b, i) => {
-              const hearing = parseHearingDate(b.hearing_date!)
-              const diffDays = daysUntil(hearing, today)
-
-              let badge: { label: string; color: string } | null = null
-              if (diffDays < 0) badge = { label: 'Overdue', color: '#D97C7C' }
-              else if (diffDays <= 7) badge = { label: 'This week', color: '#E8C97A' }
-
-              return (
-                <DeadlineRow key={b.id} href={`/staff/briefs/${b.id}`} isLast={i === briefs.length - 1}>
-                  <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
-                    {hearing.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    {badge && <UrgencyBadge label={badge.label} color={badge.color} />}
-                  </span>
-                  <div>
-                    <span style={{ fontSize: '14px', color: 'var(--cream)', display: 'block' }}>{b.parties}</span>
-                    <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{b.your_name}</span>
-                  </div>
-                  <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{b.court}</span>
-                  <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{b.matter_type}</span>
-                  <StatusBadge status={b.status} />
-                  <span style={{ fontSize: '16px', color: 'var(--dim)' }}>→</span>
-                </DeadlineRow>
-              )
-            })}
-          </div>
+          <DeadlinesView
+            briefs={briefs as Array<{
+              id: string
+              parties: string
+              court: string
+              matter_type: string
+              urgency: string
+              status: string
+              hearing_date: string
+              your_name: string
+            }>}
+            today={todayIso}
+          />
         )}
 
       </main>
