@@ -73,7 +73,7 @@ export default function ChronologyPanel({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px', marginBottom: chronology ? '14px' : '0' }}>
           <span style={{
             fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--gold)',
+            textTransform: 'uppercase', color: 'var(--accent)',
           }}>
             Chronology
           </span>
@@ -107,7 +107,7 @@ export default function ChronologyPanel({
       <div style={CARD}>
         <span style={{
           display: 'block', fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em',
-          textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '12px',
+          textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '12px',
         }}>
           Ask about this matter
         </span>

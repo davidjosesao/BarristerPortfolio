@@ -164,7 +164,7 @@ export default function Brief() {
                 >
                   <div className="form-success-icon" aria-hidden="true">
                     <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                      <path d="M1 6l4.5 4.5L15 1" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M1 6l4.5 4.5L15 1" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
                   <h3>Brief received</h3>
