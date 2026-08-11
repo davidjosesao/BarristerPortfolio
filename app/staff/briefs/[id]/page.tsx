@@ -108,7 +108,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
               <span style={{
                 display: 'block', fontSize: '11px', fontWeight: 500,
                 letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: 'var(--accent)', marginBottom: '14px',
+                color: 'var(--gold)', marginBottom: '14px',
               }}>
                 AI Summary
               </span>
