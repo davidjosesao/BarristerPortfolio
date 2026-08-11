@@ -6,9 +6,9 @@ const MAX_QUESTION_LENGTH = 500
 
 const CARD: React.CSSProperties = {
   padding: '20px 24px',
-  border: '1px solid rgba(232,229,223,0.12)',
+  border: '1px solid rgba(var(--ink-rgb),0.12)',
   borderRadius: '4px',
-  background: 'rgba(232,229,223,0.03)',
+  background: 'rgba(var(--ink-rgb),0.03)',
 }
 
 export default function ChronologyPanel({
@@ -148,7 +148,7 @@ export default function ChronologyPanel({
       </div>
 
       {error && (
-        <p style={{ fontSize: '13px', color: '#D97C7C', marginTop: '12px' }}>{error}</p>
+        <p style={{ fontSize: '13px', color: 'var(--error)', marginTop: '12px' }}>{error}</p>
       )}
 
       <p style={{ fontSize: '11px', color: 'var(--dim)', lineHeight: 1.7, marginTop: '14px' }}>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { signOut } from './actions'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 /**
  * The one staff header. Every /staff page under authentication renders this —
@@ -39,6 +40,7 @@ export function StaffHeader({
                   Sign out
                 </button>
               </form>
+              <ThemeToggle />
             </div>
           </div>
         </div>

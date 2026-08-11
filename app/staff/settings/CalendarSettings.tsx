@@ -59,7 +59,7 @@ export default function CalendarSettings({ initialToken }: { initialToken: strin
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
           <code style={{
             flex: 1, minWidth: '220px', fontSize: '11px', color: 'var(--muted)',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid var(--rule)',
+            background: 'rgba(var(--ink-rgb),0.03)', border: '1px solid var(--rule)',
             borderRadius: '3px', padding: '9px 12px',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -70,7 +70,7 @@ export default function CalendarSettings({ initialToken }: { initialToken: strin
             disabled={busy}
             style={{
               background: 'none', border: '1px solid var(--rule)', borderRadius: '3px',
-              color: copied ? '#7AC8A0' : 'var(--muted)',
+              color: copied ? 'var(--status-success)' : 'var(--muted)',
               fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
               padding: '9px 14px', cursor: 'pointer',
             }}
@@ -85,7 +85,7 @@ export default function CalendarSettings({ initialToken }: { initialToken: strin
       )}
 
       {error && (
-        <p style={{ fontSize: '13px', color: '#D97C7C', marginBottom: '12px' }}>{error}</p>
+        <p style={{ fontSize: '13px', color: 'var(--error)', marginBottom: '12px' }}>{error}</p>
       )}
 
       <button

@@ -100,9 +100,9 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
             {/* AI Summary */}
             <div style={{
               padding: '24px 28px',
-              border: '1px solid rgba(232,229,223,0.12)',
+              border: '1px solid rgba(var(--ink-rgb),0.12)',
               borderRadius: '4px',
-              background: 'rgba(232,229,223,0.03)',
+              background: 'rgba(var(--ink-rgb),0.03)',
               marginBottom: '40px',
             }}>
               <span style={{
@@ -188,7 +188,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
             padding: '28px',
             border: '1px solid var(--rule)',
             borderRadius: '4px',
-            background: 'rgba(255,255,255,0.02)',
+            background: 'rgba(var(--ink-rgb),0.02)',
             position: 'sticky',
             top: '80px',
           }}>

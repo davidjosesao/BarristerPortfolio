@@ -26,7 +26,7 @@ export default function DeadlineRow({
         textDecoration: 'none',
         alignItems: 'center',
         transition: 'background 0.2s',
-        background: hovered ? 'rgba(255,255,255,0.025)' : 'transparent',
+        background: hovered ? 'rgba(var(--ink-rgb),0.025)' : 'transparent',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

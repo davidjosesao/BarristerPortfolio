@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, useScroll, useMotionValueEvent, useSpring } from 'motion/react'
 import { BRAND_LAYOUT_ID } from './Intro'
+import { ThemeToggle } from './ThemeToggle'
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile' },
@@ -44,7 +45,6 @@ function useActiveSection() {
 
 export function SiteHeader({ showBrand }: { showBrand: boolean }) {
   const { scrollY, scrollYProgress } = useScroll()
-  const [hidden, setHidden] = useState(false)
   const [condensed, setCondensed] = useState(false)
   const activeSection = useActiveSection()
 
@@ -57,9 +57,6 @@ export function SiteHeader({ showBrand }: { showBrand: boolean }) {
   })
 
   useMotionValueEvent(scrollY, 'change', current => {
-    const previous = scrollY.getPrevious() ?? 0
-    // Only retract once past the hero, and only on a deliberate downward move.
-    setHidden(current > previous && current > 220)
     setCondensed(current > 40)
   })
 
@@ -67,9 +64,6 @@ export function SiteHeader({ showBrand }: { showBrand: boolean }) {
     <motion.header
       className={`site-header${condensed ? ' is-condensed' : ''}`}
       aria-label="Main navigation"
-      initial={false}
-      animate={{ y: hidden ? '-105%' : '0%' }}
-      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="col">
         <div className="header-inner">
@@ -90,38 +84,45 @@ export function SiteHeader({ showBrand }: { showBrand: boolean }) {
             </span>
           )}
 
-          <nav>
-            <ul className="nav-links" role="list">
-              {SECTIONS.map(section => {
-                const isActive = activeSection === section.id
-                const isBrief = section.id === 'brief-cta'
-                return (
-                  <li key={section.id}>
-                    {isBrief ? (
-                      <Link href="/brief" className="nav-link">
-                        {section.label}
-                      </Link>
-                    ) : (
-                      <a
-                        href={`#${section.id}`}
-                        className={`nav-link${isActive ? ' is-active' : ''}`}
-                        aria-current={isActive ? 'true' : undefined}
-                      >
-                        {section.label}
-                      </a>
-                    )}
-                    {isActive && (
-                      <motion.span
-                        layoutId="nav-underline"
-                        className="nav-underline"
-                        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                      />
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
+          <div className="header-nav-group">
+            <nav>
+              <ul className="nav-links" role="list">
+                {SECTIONS.map(section => {
+                  const isActive = activeSection === section.id
+                  const isBrief = section.id === 'brief-cta'
+                  return (
+                    <li key={section.id}>
+                      {isBrief ? (
+                        <Link
+                          href="/brief"
+                          className={`nav-link${isActive ? ' is-active' : ''}`}
+                          aria-current={isActive ? 'true' : undefined}
+                        >
+                          {section.label}
+                        </Link>
+                      ) : (
+                        <a
+                          href={`#${section.id}`}
+                          className={`nav-link${isActive ? ' is-active' : ''}`}
+                          aria-current={isActive ? 'true' : undefined}
+                        >
+                          {section.label}
+                        </a>
+                      )}
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-underline"
+                          className="nav-underline"
+                          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                        />
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </nav>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 

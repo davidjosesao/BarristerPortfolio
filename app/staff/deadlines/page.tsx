@@ -39,7 +39,7 @@ export default async function DeadlinesPage() {
         </div>
 
         {error && (
-          <p style={{ color: '#D97C7C', fontSize: '14px' }}>Failed to load briefs: {error.message}</p>
+          <p style={{ color: 'var(--error)', fontSize: '14px' }}>Failed to load briefs: {error.message}</p>
         )}
 
         {briefs && briefs.length === 0 && (

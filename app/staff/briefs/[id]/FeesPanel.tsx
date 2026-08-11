@@ -227,7 +227,7 @@ export default function FeesPanel({
           })}
 
           {/* Totals */}
-          <div style={{ borderTop: '1px solid var(--rule)', padding: '14px 18px', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ borderTop: '1px solid var(--rule)', padding: '14px 18px', background: 'rgba(var(--ink-rgb),0.02)' }}>
             {[
               ['Subtotal (ex GST)', subtotal],
               ['GST', gstTotal],
@@ -250,7 +250,7 @@ export default function FeesPanel({
       )}
 
       {error && (
-        <p style={{ fontSize: '13px', color: '#D97C7C', marginBottom: '12px' }}>{error}</p>
+        <p style={{ fontSize: '13px', color: 'var(--error)', marginBottom: '12px' }}>{error}</p>
       )}
 
       {fees.length > 0 && !adding && (

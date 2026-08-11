@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 }
 
 const STATUS_COPY: Record<string, { label: string; color: string; blurb: string }> = {
-  new:      { label: 'Received',  color: '#E8C97A', blurb: 'The brief has been received and is awaiting review.' },
-  reviewed: { label: 'Reviewed',  color: '#B4B0A9', blurb: 'The brief has been reviewed by chambers.' },
-  accepted: { label: 'Accepted',  color: '#7AC8A0', blurb: 'Counsel has accepted the brief.' },
-  declined: { label: 'Declined',  color: '#D97C7C', blurb: 'Counsel is unable to accept this brief.' },
+  new:      { label: 'Received',  color: 'var(--status-warning)', blurb: 'The brief has been received and is awaiting review.' },
+  reviewed: { label: 'Reviewed',  color: 'var(--gold)', blurb: 'The brief has been reviewed by chambers.' },
+  accepted: { label: 'Accepted',  color: 'var(--status-success)', blurb: 'Counsel has accepted the brief.' },
+  declined: { label: 'Declined',  color: 'var(--error)', blurb: 'Counsel is unable to accept this brief.' },
 }
 
 /**

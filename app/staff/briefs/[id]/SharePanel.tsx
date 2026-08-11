@@ -29,7 +29,7 @@ function shareUrl(token: string): string {
 }
 
 function describeState(share: Share): { text: string; color: string } {
-  if (share.revoked_at) return { text: 'Revoked', color: '#D97C7C' }
+  if (share.revoked_at) return { text: 'Revoked', color: 'var(--error)' }
   if (share.expires_at && new Date(share.expires_at).getTime() <= Date.now()) {
     return { text: 'Expired', color: 'var(--dim)' }
   }
@@ -37,9 +37,9 @@ function describeState(share: Share): { text: string; color: string } {
     const date = new Date(share.expires_at).toLocaleDateString('en-AU', {
       day: '2-digit', month: 'short', year: 'numeric',
     })
-    return { text: `Active until ${date}`, color: '#7AC8A0' }
+    return { text: `Active until ${date}`, color: 'var(--status-success)' }
   }
-  return { text: 'Active — no expiry', color: '#7AC8A0' }
+  return { text: 'Active — no expiry', color: 'var(--status-success)' }
 }
 
 export default function SharePanel({
@@ -142,7 +142,7 @@ export default function SharePanel({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <code style={{
                       flex: 1, minWidth: '200px', fontSize: '11px', color: 'var(--muted)',
-                      background: 'rgba(255,255,255,0.03)', border: '1px solid var(--rule)',
+                      background: 'rgba(var(--ink-rgb),0.03)', border: '1px solid var(--rule)',
                       borderRadius: '3px', padding: '6px 9px',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
@@ -153,7 +153,7 @@ export default function SharePanel({
                       disabled={busy}
                       style={{
                         background: 'none', border: '1px solid var(--rule)', borderRadius: '3px',
-                        color: copiedId === share.id ? '#7AC8A0' : 'var(--muted)',
+                        color: copiedId === share.id ? 'var(--status-success)' : 'var(--muted)',
                         fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
                         padding: '7px 12px', cursor: 'pointer',
                       }}
@@ -164,7 +164,7 @@ export default function SharePanel({
                       onClick={() => revoke(share.id)}
                       disabled={busy}
                       style={{
-                        background: 'none', border: 'none', color: '#D97C7C',
+                        background: 'none', border: 'none', color: 'var(--error)',
                         fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
                         padding: '7px 4px', cursor: 'pointer',
                       }}
@@ -180,7 +180,7 @@ export default function SharePanel({
       )}
 
       {error && (
-        <p style={{ fontSize: '13px', color: '#D97C7C', marginBottom: '12px' }}>{error}</p>
+        <p style={{ fontSize: '13px', color: 'var(--error)', marginBottom: '12px' }}>{error}</p>
       )}
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>

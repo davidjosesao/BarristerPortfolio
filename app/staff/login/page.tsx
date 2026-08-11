@@ -79,12 +79,12 @@ export default function StaffLogin() {
           {error && (
             <p style={{
               fontSize: '13px',
-              color: '#D97C7C',
+              color: 'var(--error)',
               marginBottom: '16px',
               padding: '10px 13px',
-              border: '1px solid rgba(217,124,124,0.25)',
+              border: '1px solid rgba(var(--error-rgb),0.25)',
               borderRadius: '3px',
-              background: 'rgba(217,124,124,0.05)',
+              background: 'rgba(var(--error-rgb),0.05)',
             }}>
               {error}
             </p>

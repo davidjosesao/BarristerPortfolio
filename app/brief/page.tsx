@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence, useInView } from 'motion/react'
 import Link from 'next/link'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number]
 
@@ -126,7 +127,10 @@ export default function Brief() {
             </svg>
             Michael Klooster
           </Link>
-          <span className="nav-name">Submit a Brief</span>
+          <div className="header-nav-group">
+            <span className="nav-name">Submit a Brief</span>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 
@@ -160,7 +164,7 @@ export default function Brief() {
                 >
                   <div className="form-success-icon" aria-hidden="true">
                     <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                      <path d="M1 6l4.5 4.5L15 1" stroke="#B4B0A9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M1 6l4.5 4.5L15 1" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
                   <h3>Brief received</h3>

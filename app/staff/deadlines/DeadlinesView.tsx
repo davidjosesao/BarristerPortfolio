@@ -17,16 +17,16 @@ type Brief = {
 }
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string }> = {
-  new:      { color: '#E8C97A', bg: 'rgba(232,201,122,0.08)', border: 'rgba(232,201,122,0.25)' },
-  reviewed: { color: '#B4B0A9', bg: 'rgba(180,176,169,0.08)', border: 'rgba(180,176,169,0.2)' },
-  accepted: { color: '#7AC8A0', bg: 'rgba(122,200,160,0.08)', border: 'rgba(122,200,160,0.25)' },
-  declined: { color: '#D97C7C', bg: 'rgba(217,124,124,0.08)', border: 'rgba(217,124,124,0.2)' },
+  new:      { color: 'var(--status-warning)', bg: 'rgba(var(--status-warning-rgb),0.08)', border: 'rgba(var(--status-warning-rgb),0.25)' },
+  reviewed: { color: 'var(--gold)', bg: 'rgba(var(--gold-rgb),0.08)', border: 'rgba(var(--gold-rgb),0.2)' },
+  accepted: { color: 'var(--status-success)', bg: 'rgba(var(--status-success-rgb),0.08)', border: 'rgba(var(--status-success-rgb),0.25)' },
+  declined: { color: 'var(--error)', bg: 'rgba(var(--error-rgb),0.08)', border: 'rgba(var(--error-rgb),0.2)' },
 }
 
 // Stable colour per matter type, derived from a small fixed palette rather
 // than random hashing so the same type always reads the same colour across
 // sessions.
-const TYPE_PALETTE = ['#E8C97A', '#7AC8A0', '#8FB4D9', '#D9A0C4', '#D9976A', '#9AA8D9', '#B4D97A']
+const TYPE_PALETTE = ['var(--status-warning)', 'var(--status-success)', '#8FB4D9', '#D9A0C4', '#D9976A', '#9AA8D9', '#B4D97A']
 
 function colorForType(type: string, allTypes: string[]): string {
   const idx = allTypes.indexOf(type)
@@ -170,8 +170,8 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                 padding: '8px 18px',
                 border: 'none',
                 cursor: 'pointer',
-                background: view === v ? 'rgba(232,201,122,0.1)' : 'transparent',
-                color: view === v ? '#E8C97A' : 'var(--muted)',
+                background: view === v ? 'rgba(var(--status-warning-rgb),0.1)' : 'transparent',
+                color: view === v ? 'var(--status-warning)' : 'var(--muted)',
               }}
             >
               {v === 'calendar' ? 'Calendar' : 'List'}
@@ -229,7 +229,7 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                 gap: '16px',
                 padding: '10px 20px',
                 borderBottom: '1px solid var(--rule)',
-                background: 'rgba(255,255,255,0.02)',
+                background: 'rgba(var(--ink-rgb),0.02)',
               }}>
                 {['Hearing date', 'Parties', 'Court', 'Matter', 'Status', ''].map(h => (
                   <span key={h} style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>{h}</span>
@@ -241,8 +241,8 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                 const diffDays = daysUntil(hearing, todayDate)
 
                 let badge: { label: string; color: string } | null = null
-                if (diffDays < 0) badge = { label: 'Overdue', color: '#D97C7C' }
-                else if (diffDays <= 7) badge = { label: 'This week', color: '#E8C97A' }
+                if (diffDays < 0) badge = { label: 'Overdue', color: 'var(--error)' }
+                else if (diffDays <= 7) badge = { label: 'This week', color: 'var(--status-warning)' }
 
                 return (
                   <DeadlineRow key={b.id} href={`/staff/briefs/${b.id}`} isLast={i === filtered.length - 1}>
@@ -297,7 +297,7 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
           </div>
 
           <div style={{ border: '1px solid var(--rule)', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(255,255,255,0.02)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(var(--ink-rgb),0.02)' }}>
               {WEEKDAY_LABELS.map(w => (
                 <div key={w} style={{ padding: '8px 10px', fontSize: '11px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '1px solid var(--rule)' }}>
                   {w}
@@ -325,7 +325,7 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                       border: 'none',
                       borderRight: (i + 1) % 7 === 0 ? 'none' : '1px solid var(--rule)',
                       borderBottom: i < 35 ? '1px solid var(--rule)' : 'none',
-                      background: isSelected ? 'rgba(232,201,122,0.08)' : 'transparent',
+                      background: isSelected ? 'rgba(var(--status-warning-rgb),0.08)' : 'transparent',
                       cursor: items.length > 0 ? 'pointer' : 'default',
                       opacity: inMonth ? 1 : 0.35,
                       display: 'flex',
@@ -337,7 +337,7 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                     <span style={{
                       fontSize: '12px',
                       fontVariantNumeric: 'tabular-nums',
-                      color: isToday ? '#E8C97A' : 'var(--muted)',
+                      color: isToday ? 'var(--status-warning)' : 'var(--muted)',
                       fontWeight: isToday ? 600 : 400,
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -345,7 +345,7 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                       width: '20px',
                       height: '20px',
                       borderRadius: '50%',
-                      border: isToday ? '1px solid rgba(232,201,122,0.4)' : 'none',
+                      border: isToday ? '1px solid rgba(var(--status-warning-rgb),0.4)' : 'none',
                     }}>
                       {d.getDate()}
                     </span>
@@ -375,7 +375,7 @@ export default function DeadlinesView({ briefs, today }: { briefs: Brief[]; toda
                         <span style={{ fontSize: '10px', color: 'var(--muted)' }}>+{items.length - 3} more</span>
                       )}
                       {isOverdue && (
-                        <span style={{ fontSize: '10px', color: '#D97C7C' }}>Overdue</span>
+                        <span style={{ fontSize: '10px', color: 'var(--error)' }}>Overdue</span>
                       )}
                     </div>
                   </button>

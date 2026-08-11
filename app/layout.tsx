@@ -70,9 +70,30 @@ const jsonLd = {
   },
 }
 
+// Runs before first paint (blocking, in <head>) so the page never flashes
+// the wrong theme on load — React hydrates into whatever this already set.
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var stored = window.localStorage.getItem('theme');
+    document.documentElement.dataset.theme = stored === 'light' ? 'light' : 'dark';
+  } catch (e) {
+    document.documentElement.dataset.theme = 'dark';
+  }
+})();
+`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-AU" className={`${garamond.variable} ${inter.variable}`}>
+    <html
+      lang="en-AU"
+      className={`${garamond.variable} ${inter.variable}`}
+      data-theme="dark"
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <script
           type="application/ld+json"

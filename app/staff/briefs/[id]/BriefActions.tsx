@@ -5,10 +5,10 @@ import { useState } from 'react'
 const STATUSES = ['new', 'reviewed', 'accepted', 'declined']
 
 const STATUS_COLORS: Record<string, string> = {
-  new: '#E8C97A',
-  reviewed: '#B4B0A9',
-  accepted: '#7AC8A0',
-  declined: '#D97C7C',
+  new: 'var(--status-warning)',
+  reviewed: 'var(--gold)',
+  accepted: 'var(--status-success)',
+  declined: 'var(--error)',
 }
 
 export default function BriefActions({
@@ -113,8 +113,8 @@ export default function BriefActions({
           >
             {saving ? 'Saving…' : 'Save notes'}
           </button>
-          {saved && <span style={{ fontSize: '13px', color: '#7AC8A0' }}>Saved</span>}
-          {error && <span style={{ fontSize: '13px', color: '#D97C7C' }}>{error}</span>}
+          {saved && <span style={{ fontSize: '13px', color: 'var(--status-success)' }}>Saved</span>}
+          {error && <span style={{ fontSize: '13px', color: 'var(--error)' }}>{error}</span>}
         </div>
       </div>
     </div>

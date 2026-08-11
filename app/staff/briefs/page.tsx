@@ -5,10 +5,10 @@ import BriefRow from './BriefRow'
 import { formatChambersDate } from '../../../lib/chambers-time'
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string }> = {
-  new:      { color: '#E8C97A', bg: 'rgba(232,201,122,0.08)', border: 'rgba(232,201,122,0.25)' },
-  reviewed: { color: '#B4B0A9', bg: 'rgba(180,176,169,0.08)', border: 'rgba(180,176,169,0.2)' },
-  accepted: { color: '#7AC8A0', bg: 'rgba(122,200,160,0.08)', border: 'rgba(122,200,160,0.25)' },
-  declined: { color: '#D97C7C', bg: 'rgba(217,124,124,0.08)', border: 'rgba(217,124,124,0.2)' },
+  new:      { color: 'var(--status-warning)', bg: 'rgba(var(--status-warning-rgb),0.08)', border: 'rgba(var(--status-warning-rgb),0.25)' },
+  reviewed: { color: 'var(--gold)', bg: 'rgba(var(--gold-rgb),0.08)', border: 'rgba(var(--gold-rgb),0.2)' },
+  accepted: { color: 'var(--status-success)', bg: 'rgba(var(--status-success-rgb),0.08)', border: 'rgba(var(--status-success-rgb),0.25)' },
+  declined: { color: 'var(--error)', bg: 'rgba(var(--error-rgb),0.08)', border: 'rgba(var(--error-rgb),0.2)' },
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -57,7 +57,7 @@ export default async function BriefsListPage() {
         </div>
 
         {error && (
-          <p style={{ color: '#D97C7C', fontSize: '14px' }}>Failed to load briefs: {error.message}</p>
+          <p style={{ color: 'var(--error)', fontSize: '14px' }}>Failed to load briefs: {error.message}</p>
         )}
 
         {briefs && briefs.length === 0 && (
@@ -73,7 +73,7 @@ export default async function BriefsListPage() {
               gap: '16px',
               padding: '10px 20px',
               borderBottom: '1px solid var(--rule)',
-              background: 'rgba(255,255,255,0.02)',
+              background: 'rgba(var(--ink-rgb),0.02)',
             }}>
               {['Date', 'Parties', 'Court', 'Matter', 'Urgency', 'Status', ''].map(h => (
                 <span key={h} style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>{h}</span>
@@ -91,7 +91,7 @@ export default async function BriefsListPage() {
                 </div>
                 <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{b.court}</span>
                 <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{b.matter_type}</span>
-                <span style={{ fontSize: '13px', color: b.urgency === 'Immediate' ? '#E8C97A' : 'var(--muted)' }}>{b.urgency}</span>
+                <span style={{ fontSize: '13px', color: b.urgency === 'Immediate' ? 'var(--status-warning)' : 'var(--muted)' }}>{b.urgency}</span>
                 <StatusBadge status={b.status} />
                 <span style={{ fontSize: '16px', color: 'var(--dim)' }}>→</span>
               </BriefRow>

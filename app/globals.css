@@ -1,31 +1,81 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 
+/* Theme tokens. `data-theme` is stamped onto <html> by the inline script in
+   layout.tsx (before paint, to avoid a flash) and flipped at runtime by
+   <ThemeToggle>. Dark is the default/base :root; light is a full override
+   block below so every page — home, /brief, /staff/*, share links — draws
+   from the same set of variables and reacts to the toggle uniformly. */
 :root {
   --bg:      #181A1C;
   --surface: #1F2124;
   --text:    #E8E5DF;
   /* Contrast against --bg #181A1C: --muted ≈ 7.4:1, --dim ≈ 4.6:1.
      Both clear WCAG AA for body text; the old 0.44 / 0.22 values sat near 3:1. */
-  --muted:   rgba(232,229,223,0.72);
-  --dim:     rgba(232,229,223,0.52);
-  --rule:    rgba(232,229,223,0.10);
+  --muted:   rgba(var(--ink-rgb),0.72);
+  --dim:     rgba(var(--ink-rgb),0.52);
+  --rule:    rgba(var(--ink-rgb),0.10);
   --gold:    #B4B0A9;
   --cream:   #E8E5DF;
   --ease:    cubic-bezier(0.22, 1, 0.36, 1);
-  /* Single brand accent, lifted from the requested #5B2428 oxblood so it
-     clears 4.5:1 against --bg (measured ≈4.7:1). --accent-deep is the true
-     brand tone, kept for fills where the foreground sitting on it is light
-     text rather than the accent needing to read on its own. */
-  --accent:      #C36B6E;
-  --accent-deep: #5B2428;
-  --accent-soft: rgba(195,107,110,0.16);
+  /* Same literal wine in both themes, no lifted variant — by request.
+     Note this measures under 2:1 against --bg, so it won't read as AA-legible
+     text on its own; it still works for underlines/markers/fills where the
+     shape or the surrounding light text carries the contrast. */
+  --accent:      #7A0F2C;
+  --accent-deep: #7A0F2C;
+  --accent-soft: rgba(122,15,44,0.18);
+  /* Bare RGB triplet (no rgba() wrapper) so the many one-off "text colour at
+     some alpha" spots below can do rgba(var(--ink-rgb), X) and flip with
+     everything else, instead of needing a hand-maintained duplicate rule
+     under [data-theme="light"] for each one. */
+  --ink-rgb: 232,229,223;
+  /* The tinted blur strip behind the condensed header / brief nav / staff
+     header — same idea as --surface but translucent. */
+  --blur-bg: rgba(24,26,28,0.92);
+  --error:     #D97C7C;
+  --error-rgb: 217,124,124;
+  --gold-rgb: 180,176,169;
+  /* Status-badge palette used across /staff and /share (brief lifecycle,
+     deadline urgency). Dark values are the site's long-standing pastels;
+     light gets darkened/more-saturated siblings of the same hue so badge
+     text still clears 4.5:1 on the off-white background. */
+  --status-success:     #7AC8A0;
+  --status-success-rgb: 122,200,160;
+  --status-warning:     #E8C97A;
+  --status-warning-rgb: 232,201,122;
 }
 
-::selection { background: rgba(195,107,110,0.22); }
+:root[data-theme='light'] {
+  --bg:      #F6F3EC;
+  --surface: #EFEBE1;
+  --text:    #201C1A;
+  /* Contrast against --bg #F6F3EC (≈15:1 fg/bg): --muted ≈ 7.3:1, --dim ≈ 4.7:1. */
+  --muted:   rgba(32,28,26,0.72);
+  --dim:     rgba(32,28,26,0.52);
+  --rule:    rgba(32,28,26,0.10);
+  --gold:    #6E6350;
+  --cream:   #201C1A;
+  --accent:      #7A0F2C;
+  --accent-deep: #7A0F2C;
+  --accent-soft: rgba(122,15,44,0.09);
+  --ink-rgb: 32,28,26;
+  --blur-bg: rgba(246,243,236,0.92);
+  --error:     #A83A3A;
+  --error-rgb: 168,58,58;
+  --gold-rgb: 110,99,80;
+  --status-success:     #2F7A52;
+  --status-success-rgb: 47,122,82;
+  --status-warning:     #7A5F17;
+  --status-warning-rgb: 122,95,23;
+}
+
+::selection { background: rgba(122,15,44,0.24); }
 
 :focus-visible {
-  outline: 1px solid var(--accent);
+  /* Kept lifted, unlike the rest of --accent's uses here — an invisible
+     keyboard focus ring is a usability failure, not a style choice. */
+  outline: 1px solid #C14868;
   outline-offset: 3px;
   border-radius: 2px;
 }
@@ -57,29 +107,16 @@ body {
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 48px;
-  align-items: start;
+  align-items: center;
 }
 .row-label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
+  font-style: italic;
+  font-size: 25px;
+  font-weight: 400;
+  letter-spacing: 0.005em;
   color: var(--dim);
-  padding-top: 4px;
-  position: relative;
-  padding-left: 18px;
-}
-/* Tiny section marker — the one place the accent appears unprompted,
-   rather than only on interaction, so it reads as a system rather than
-   a hover-only flourish. */
-.row-label::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 9px;
-  width: 10px;
-  height: 1px;
-  background: var(--accent);
+  text-align: center;
 }
 
 /* ── Site header ── */
@@ -101,7 +138,7 @@ body {
 }
 /* Only earns its backdrop once content is actually passing beneath it. */
 .site-header.is-condensed {
-  background: rgba(24,26,28,0.92);
+  background: var(--blur-bg);
   border-bottom-color: var(--rule);
 }
 .header-inner {
@@ -132,6 +169,11 @@ body {
   gap: 0.3em;
 }
 
+.header-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
 .nav-links {
   list-style: none;
   display: flex;
@@ -158,14 +200,34 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 1px;
+  height: 2px;
   background: var(--accent);
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--dim);
 }
 .header-progress {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--accent));
   transform-origin: 0%;
   opacity: 0.65;
+  transition: opacity 0.3s var(--ease);
 }
 
 main, footer { position: relative; z-index: 1; }
@@ -185,7 +247,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
   font-style: italic;
   font-size: 580px;
   line-height: 1;
-  color: rgba(232,229,223,0.024);
+  color: rgba(var(--ink-rgb),0.024);
   white-space: nowrap;
 }
 .mono-letter-m { left: 50%; top: 50%; transform: translate(-92%, -56%); }
@@ -242,9 +304,9 @@ hr { border: none; border-top: 1px solid var(--rule); }
 }
 .hero-chambers a {
   font-size: 14px;
-  color: rgba(232,229,223,0.6);
+  color: rgba(var(--ink-rgb),0.6);
   text-decoration: none;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 2px solid var(--rule);
   padding-bottom: 1px;
   transition: color 0.2s, border-color 0.2s;
 }
@@ -263,7 +325,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(232,229,223,0.55);
+  color: rgba(var(--ink-rgb),0.55);
   min-width: 46px;
   flex-shrink: 0;
 }
@@ -286,7 +348,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(232,229,223,0.08);
+  border: 1px solid rgba(var(--ink-rgb),0.08);
   border-radius: 3px;
   pointer-events: none;
   z-index: 1;
@@ -308,8 +370,8 @@ hr { border: none; border-top: 1px solid var(--rule); }
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(232,229,223,0.22);
-  color: rgba(232,229,223,0.78);
+  border: 1px solid rgba(var(--ink-rgb),0.22);
+  color: rgba(var(--ink-rgb),0.78);
   padding: 13px 28px;
   font-family: var(--font-inter, 'Inter', system-ui, sans-serif);
   font-size: 12px;
@@ -348,7 +410,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
   left: 0;
   top: 20%;
   height: 60%;
-  width: 1px;
+  width: 2px;
   background: var(--dim);
   transform: scaleY(0);
   transform-origin: center;
@@ -391,15 +453,21 @@ hr { border: none; border-top: 1px solid var(--rule); }
   font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
   font-size: 23px;
   font-style: italic;
-  color: rgba(232,229,223,0.72);
+  color: rgba(var(--ink-rgb),0.72);
   line-height: 1.5;
   max-width: 480px;
   text-wrap: pretty;
 }
 
 /* ── Footer ── */
-footer { padding: 88px 0 56px; }
-.footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-bottom: 64px; }
+/* The extra 64px (vs. the base 56px) replaces .footer-grid's old
+   margin-bottom — that margin lived inside the grid item .row's
+   align-items: center measures, so it inflated the box being centred and
+   pulled "Contact" visibly off from the actual address text. Padding out
+   here, outside the row entirely, keeps the same gap before .footer-bottom
+   without corrupting the centring. */
+footer { padding: 88px 0 120px; }
+.footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
 .footer-left strong {
   display: block;
   font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
@@ -417,8 +485,8 @@ footer { padding: 88px 0 56px; }
   display: inline-block;
   margin-top: 14px;
   font-size: 13px;
-  color: rgba(232,229,223,0.6) !important;
-  border-bottom: 1px solid var(--rule);
+  color: rgba(var(--ink-rgb),0.6) !important;
+  border-bottom: 2px solid var(--rule);
   padding-bottom: 1px;
   transition: color 0.2s, border-color 0.2s;
 }
@@ -462,7 +530,17 @@ footer { padding: 88px 0 56px; }
   pointer-events: none;
   background: radial-gradient(
     ellipse 60% 44% at 50% 50%,
-    rgba(232,229,223,0.036) 0%,
+    rgba(var(--ink-rgb),0.036) 0%,
+    transparent 70%
+  );
+}
+/* A neutral ink-tinted glow reads as a muddy smudge on a light background —
+   the light theme gets a wine-tinted glow instead, same idea as the dark
+   theme's off-white glow. */
+:root[data-theme='light'] #intro-glow {
+  background: radial-gradient(
+    ellipse 60% 44% at 50% 50%,
+    rgba(122,15,44,0.06) 0%,
     transparent 70%
   );
 }
@@ -494,7 +572,7 @@ footer { padding: 88px 0 56px; }
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(11,13,17,0.92);
+  background: var(--blur-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--rule);
@@ -508,7 +586,7 @@ footer { padding: 88px 0 56px; }
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(11,13,17,0.92);
+  background: var(--blur-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--rule);
@@ -552,8 +630,15 @@ footer { padding: 88px 0 56px; }
 .staff-nav-link:hover { color: var(--cream); }
 .staff-header-account {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+}
+/* Restores the baseline alignment the row used before the toggle button
+   joined it, just scoped to the two text nodes. */
+.staff-email,
+.staff-header-sep,
+.staff-signout {
+  align-self: baseline;
 }
 /* Email and Sign out read as one line of text, not two separately-styled
    controls — same size, weight, case and colour, split only by the dot. */
@@ -604,7 +689,7 @@ footer { padding: 88px 0 56px; }
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
-  color: rgba(237,232,222,0.28);
+  color: rgba(var(--ink-rgb),0.28);
   text-transform: uppercase;
 }
 .section-label {
@@ -653,13 +738,13 @@ footer { padding: 88px 0 56px; }
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
-  color: rgba(237,232,222,0.28);
+  color: rgba(var(--ink-rgb),0.28);
   margin-left: 4px;
 }
 .field input, .field select, .field textarea {
   width: 100%;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(232,229,223,0.10);
+  background: rgba(var(--ink-rgb),0.025);
+  border: 1px solid rgba(var(--ink-rgb),0.10);
   color: var(--cream);
   padding: 11px 13px;
   font-family: var(--font-inter, 'Inter', system-ui, sans-serif);
@@ -671,36 +756,48 @@ footer { padding: 88px 0 56px; }
   appearance: none;
   -webkit-appearance: none;
 }
-.field input::placeholder, .field textarea::placeholder { color: rgba(237,232,222,0.18); }
+.field input::placeholder, .field textarea::placeholder { color: rgba(var(--ink-rgb),0.18); }
 .field input:focus, .field select:focus, .field textarea:focus {
-  border-color: rgba(237,232,222,0.6);
-  background: rgba(255,255,255,0.045);
+  border-color: rgba(var(--ink-rgb),0.6);
+  background: rgba(var(--ink-rgb),0.045);
   outline: none;
-  box-shadow: 0 0 0 1px rgba(232,229,223,0.08);
+  box-shadow: 0 0 0 1px rgba(var(--ink-rgb),0.08);
 }
 .field input.invalid, .field select.invalid, .field textarea.invalid {
-  border-color: rgba(217,124,124,0.55);
-  background: rgba(217,124,124,0.04);
+  border-color: rgba(var(--error-rgb),0.55);
+  background: rgba(var(--error-rgb),0.04);
 }
-.field-error { font-size: 12px; color: #D97C7C; display: none; }
+.field-error { font-size: 12px; color: var(--error); display: none; }
 .field-error.visible { display: block; }
 .field input[type="date"]::-webkit-calendar-picker-indicator {
+  /* Brightens the browser's dark calendar-glyph so it reads on a dark
+     field; the light theme's override below removes it since the glyph
+     is already dark-on-light by default there. */
   filter: invert(0.5) sepia(1) saturate(2) hue-rotate(5deg);
   cursor: pointer;
   opacity: 0.5;
 }
+:root[data-theme='light'] .field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.55;
+}
 .field select {
   cursor: pointer;
+  /* Baked-in hex, not var(--gold) — SVG data-URIs can't reference CSS custom
+     properties. The light override below swaps in that theme's --gold hex. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23B4B0A9' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 13px center;
   padding-right: 38px;
 }
-.field select option { background: #1A1D24; color: var(--cream); }
+:root[data-theme='light'] .field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%236E6350' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.field select option { background: var(--bg); color: var(--cream); }
 .field textarea { min-height: 116px; resize: vertical; line-height: 1.65; }
 .char-counter { font-size: 12px; color: var(--muted); text-align: right; margin-top: -4px; transition: color 0.2s; }
 .char-counter.warn { color: var(--gold); }
-.char-counter.over { color: #E07777; }
+.char-counter.over { color: var(--error); }
 .form-divider { grid-column: 1 / -1; height: 1px; background: var(--rule); margin: 8px 0; }
 .form-actions {
   grid-column: 1 / -1;
@@ -725,19 +822,19 @@ footer { padding: 88px 0 56px; }
 }
 .btn-submit:hover { background: var(--gold); border-color: var(--gold); color: var(--bg); }
 .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
-.form-note { font-size: 12px; color: rgba(237,232,222,0.28); line-height: 1.6; }
+.form-note { font-size: 12px; color: rgba(var(--ink-rgb),0.28); line-height: 1.6; }
 .form-success {
   padding: 36px;
   border: 1px solid var(--rule);
   border-radius: 3px;
-  background: rgba(232,229,223,0.04);
+  background: rgba(var(--ink-rgb),0.04);
   margin-top: 8px;
 }
 .form-success-icon {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid rgba(232,229,223,0.16);
+  border: 1px solid rgba(var(--ink-rgb),0.16);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -756,18 +853,18 @@ footer { padding: 88px 0 56px; }
 .form-error {
   grid-column: 1 / -1;
   font-size: 13px;
-  color: #D97C7C;
+  color: var(--error);
   padding: 12px 14px;
-  border: 1px solid rgba(217,124,124,0.25);
+  border: 1px solid rgba(var(--error-rgb),0.25);
   border-radius: 3px;
-  background: rgba(217,124,124,0.05);
+  background: rgba(var(--error-rgb),0.05);
   line-height: 1.65;
 }
 .form-error a { color: var(--gold); }
 .brief-footer { border-top: 1px solid var(--rule); padding: 32px 0; position: relative; z-index: 1; }
 .brief-footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-.brief-footer-inner p { font-size: 12px; color: rgba(237,232,222,0.25); letter-spacing: 0.03em; }
-.brief-footer-inner a { font-size: 12px; color: rgba(237,232,222,0.3); text-decoration: none; transition: color 0.2s; }
+.brief-footer-inner p { font-size: 12px; color: rgba(var(--ink-rgb),0.25); letter-spacing: 0.03em; }
+.brief-footer-inner a { font-size: 12px; color: rgba(var(--ink-rgb),0.3); text-decoration: none; transition: color 0.2s; }
 .brief-footer-inner a:hover { color: var(--gold); }
 
 /* ── Responsive ── */
@@ -776,21 +873,25 @@ footer { padding: 88px 0 56px; }
   .row { grid-template-columns: 1fr; gap: 20px; }
   .hero-inner { gap: 48px; }
   .mono-letter-m, .mono-letter-k { display: none; }
+  .footer-bottom { padding: 24px 32px; }
 }
 @media (max-width: 640px) {
   .col { padding: 0 24px; }
   .col-narrow { padding: 0 20px; }
+  .footer-bottom { padding: 20px 24px; }
   .hero-inner { grid-template-columns: 1fr; gap: 36px; }
   .hero-photo { width: 148px; height: 190px; }
   /* The brand mark alone would crowd the links at this width. */
   .header-brand { font-size: 15px; }
+  .header-nav-group { gap: 14px; }
   .nav-links { gap: 18px; }
   .nav-link { font-size: 10px; letter-spacing: 0.1em; }
+  .theme-toggle { width: 28px; height: 28px; }
   #hero { padding-top: 150px; }
   .footer-grid { grid-template-columns: 1fr; gap: 32px; }
   #hero { padding: 64px 0; }
   #profile, #brief-cta { padding: 56px 0; }
-  footer { padding: 56px 0 40px; }
+  footer { padding: 56px 0 104px; }
   .brief-cta-row { flex-direction: column; align-items: flex-start; }
   .hero-foot { flex-direction: column; align-items: flex-start; gap: 24px; }
   .brief-header { padding: 52px 0 40px; }
