@@ -13,12 +13,19 @@ html { scroll-behavior: smooth; }
   --gold:    #B4B0A9;
   --cream:   #E8E5DF;
   --ease:    cubic-bezier(0.22, 1, 0.36, 1);
+  /* Single brand accent, lifted from the requested #5B2428 oxblood so it
+     clears 4.5:1 against --bg (measured ≈4.7:1). --accent-deep is the true
+     brand tone, kept for fills where the foreground sitting on it is light
+     text rather than the accent needing to read on its own. */
+  --accent:      #C36B6E;
+  --accent-deep: #5B2428;
+  --accent-soft: rgba(195,107,110,0.16);
 }
 
-::selection { background: rgba(232,229,223,0.18); }
+::selection { background: rgba(195,107,110,0.22); }
 
 :focus-visible {
-  outline: 1px solid rgba(232,229,223,0.45);
+  outline: 1px solid var(--accent);
   outline-offset: 3px;
   border-radius: 2px;
 }
@@ -59,6 +66,20 @@ body {
   text-transform: uppercase;
   color: var(--dim);
   padding-top: 4px;
+  position: relative;
+  padding-left: 18px;
+}
+/* Tiny section marker — the one place the accent appears unprompted,
+   rather than only on interaction, so it reads as a system rather than
+   a hover-only flourish. */
+.row-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 10px;
+  height: 1px;
+  background: var(--accent);
 }
 
 /* ── Site header ── */
@@ -129,7 +150,8 @@ body {
   display: block;
   padding-bottom: 5px;
 }
-.nav-link:hover, .nav-link.is-active { color: var(--text); }
+.nav-link:hover { color: var(--text); }
+.nav-link.is-active { color: var(--accent); }
 /* One underline element for the whole nav — it slides between items. */
 .nav-underline {
   position: absolute;
@@ -137,13 +159,13 @@ body {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: var(--text);
+  background: var(--accent);
 }
 .header-progress {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold));
+  background: linear-gradient(90deg, transparent, var(--accent));
   transform-origin: 0%;
-  opacity: 0.55;
+  opacity: 0.65;
 }
 
 main, footer { position: relative; z-index: 1; }
@@ -226,7 +248,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
   padding-bottom: 1px;
   transition: color 0.2s, border-color 0.2s;
 }
-.hero-chambers a:hover { color: var(--text); border-color: var(--dim); }
+.hero-chambers a:hover { color: var(--accent); border-color: var(--accent); }
 .hero-foot {
   display: flex;
   align-items: center;
@@ -256,6 +278,9 @@ hr { border: none; border-top: 1px solid var(--rule); }
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
+  /* Deliberately off the text block's vertical centre — a composition
+     rather than two independently centred elements. */
+  transform: translateY(10px);
 }
 .hero-photo::after {
   content: '';
@@ -300,7 +325,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
 }
 .btn-arrow { display: inline-block; transition: transform 0.35s var(--ease); }
 .btn-outline:hover { background: var(--text); border-color: var(--text); color: var(--bg); }
-.btn-outline:hover .btn-arrow { transform: translateX(4px); }
+.btn-outline:hover .btn-arrow { transform: translateX(4px); color: var(--accent-deep); }
 
 /* ── Profile ── */
 #profile { padding: 88px 0; border-bottom: 1px solid var(--rule); }
@@ -331,7 +356,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
   border-radius: 1px;
 }
 .profile-link-row:first-child { border-top: 1px solid var(--rule); }
-.profile-link-row:hover::before { transform: scaleY(1); background: var(--muted); }
+.profile-link-row:hover::before { transform: scaleY(1); background: var(--accent); }
 .profile-link-label {
   font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
   font-size: 22px;
@@ -352,7 +377,9 @@ hr { border: none; border-top: 1px solid var(--rule); }
 .profile-link-row:hover .arrow-out { transform: translate(2px, -2px); }
 
 /* ── Brief CTA ── */
-#brief-cta { padding: 88px 0; border-bottom: 1px solid var(--rule); }
+/* 96/80 rather than the Profile section's even 88/88 — a small deliberate
+   rhythm change rather than repeating the same block height throughout. */
+#brief-cta { padding: 96px 0 80px; border-bottom: 1px solid var(--rule); }
 .brief-cta-row {
   display: flex;
   justify-content: space-between;
@@ -385,7 +412,7 @@ footer { padding: 88px 0 56px; }
 .footer-left p { font-size: 13px; color: var(--muted); line-height: 1.85; }
 .footer-right { display: flex; flex-direction: column; align-items: flex-start; }
 .footer-right a { display: block; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; line-height: 1.85; }
-.footer-right a:hover { color: var(--text); }
+.footer-right a:hover { color: var(--accent); }
 .footer-chambers-link {
   display: inline-block;
   margin-top: 14px;
@@ -395,7 +422,7 @@ footer { padding: 88px 0 56px; }
   padding-bottom: 1px;
   transition: color 0.2s, border-color 0.2s;
 }
-.footer-chambers-link:hover { color: var(--text) !important; border-color: var(--dim); }
+.footer-chambers-link:hover { color: var(--accent) !important; border-color: var(--accent); }
 .footer-bottom {
   border-top: 1px solid var(--rule);
   padding: 24px 48px;
