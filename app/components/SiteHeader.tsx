@@ -14,8 +14,16 @@ const SECTIONS = [
 
 /**
  * Tracks which section owns the viewport so the header can move its underline
- * to match. rootMargin biases the "active" band to the upper third, which is
- * where a reader's attention actually sits.
+ * to match. Picks the last section (in document order) whose top has crossed
+ * the vertical CENTER of the viewport — a plain scrollspy comparison rather
+ * than IntersectionObserver bands, which fell apart on this page: Brief and
+ * Contact sit close enough together near the bottom that a reference point
+ * near the top of the viewport always favours Brief (it's the one nearer
+ * the top), even once you've scrolled all the way down and Contact is
+ * plainly the section on screen. Using the viewport's centre as the
+ * reference — the standard scrollspy heuristic — resolves that without a
+ * separate "near bottom" special case: at max scroll the centre point falls
+ * inside Contact's range, so it wins on its own.
  */
 function useActiveSection() {
   const [active, setActive] = useState<string | null>(null)
@@ -26,18 +34,33 @@ function useActiveSection() {
     )
     if (targets.length === 0) return
 
-    const observer = new IntersectionObserver(
-      entries => {
-        const visible = entries
-          .filter(e => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        if (visible.length > 0) setActive(visible[0].target.id)
-      },
-      { rootMargin: '-20% 0px -60% 0px', threshold: 0 },
-    )
+    let ticking = false
+    const update = () => {
+      ticking = false
+      const reference = window.scrollY + window.innerHeight / 2
 
-    targets.forEach(el => observer.observe(el))
-    return () => observer.disconnect()
+      let current = targets[0].id
+      for (const el of targets) {
+        if (el.offsetTop <= reference) current = el.id
+      }
+
+      setActive(current)
+    }
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true
+        requestAnimationFrame(update)
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    update()
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
   }, [])
 
   return active

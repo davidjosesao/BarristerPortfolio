@@ -177,7 +177,7 @@ export default function Home() {
           <div className="col" style={{ position: 'relative', zIndex: 1 }}>
             <div className="row">
               <Reveal>
-                <p className="row-label" id="brief-heading">Instructions</p>
+                <p className="row-label" id="brief-heading">Brief</p>
               </Reveal>
               <Reveal delay={0.13}>
                 <div className="brief-cta-row">
