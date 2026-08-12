@@ -390,8 +390,7 @@ hr { border: none; border-top: 1px solid var(--rule); }
 .btn-outline:hover .btn-arrow { transform: translateX(4px); color: var(--accent-deep); }
 
 /* ── Profile ── */
-#profile { padding: 88px 0; border-bottom: 1px solid var(--rule); }
-.profile-links { display: flex; flex-direction: column; }
+#profile { padding: 88px 0; border-bottom: 1px solid var(--rule); }.profile-links { display: flex; flex-direction: column; }
 .profile-link-row {
   display: flex;
   justify-content: space-between;
@@ -437,6 +436,92 @@ hr { border: none; border-top: 1px solid var(--rule); }
 .profile-link-row:hover .profile-link-arrow { color: var(--text); }
 .profile-link-row:hover .arrow-down { transform: translateY(3px); }
 .profile-link-row:hover .arrow-out { transform: translate(2px, -2px); }
+
+/* ── Practice / courts / experience / admissions ───────────────────────────
+   All four share the site's existing label-and-column row. Structure comes
+   from type, rules and spacing rather than cards — the page already earns its
+   hierarchy that way and a grid of rounded boxes would break with it. */
+#practice, #courts, #experience, #matters, #memberships {
+  padding: 76px 0;
+  border-bottom: 1px solid var(--rule);
+}
+#practice, #courts, #experience, #matters, #memberships {
+  scroll-margin-top: 80px;
+}
+
+/* Practice areas carry no descriptions on the chambers profile, so they are
+   set as a list of names rather than padded out with invented copy. Garamond
+   at 19px keeps them a clear step above the sans-serif Courts list below —
+   the two sections read as different weights of information, not a repeat. */
+.practice-list { list-style: none; columns: 2; column-gap: 48px; }
+.practice-list li {
+  font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
+  font-size: 19px;
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--text);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  break-inside: avoid;
+}
+
+.practice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px 48px;
+}
+.practice-grid-single { grid-template-columns: 1fr; }
+.practice-item { border-top: 1px solid var(--rule); padding-top: 16px; }
+.practice-name {
+  font-family: var(--font-garamond, 'EB Garamond', Georgia, serif);
+  font-size: 21px;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.25;
+  color: var(--text);
+  margin-bottom: 7px;
+}
+.practice-desc { font-size: 13.5px; color: var(--muted); line-height: 1.72; text-wrap: pretty; }
+.matter-meta {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 10px;
+}
+
+/* Courts, memberships — a plain ruled list, one item per line. */
+.plain-list { list-style: none; columns: 2; column-gap: 48px; }
+.plain-list li {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 11px 0;
+  border-bottom: 1px solid var(--rule);
+  /* Keeps an item from being split across the column break. */
+  break-inside: avoid;
+}
+
+/* Experience — period in the gutter, role and detail beside it. */
+.timeline { list-style: none; }
+.timeline li {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 20px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.timeline li:first-child { border-top: 1px solid var(--rule); }
+.timeline-year {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-detail { font-size: 14px; color: var(--muted); }
+.timeline-note { font-size: 12.5px; color: var(--dim); margin-top: 3px; }
 
 /* ── Brief CTA ── */
 /* 96/80 rather than the Profile section's even 88/88 — a small deliberate
@@ -874,6 +959,8 @@ footer { padding: 88px 0 120px; }
   .hero-inner { gap: 48px; }
   .mono-letter-m, .mono-letter-k { display: none; }
   .footer-bottom { padding: 24px 32px; }
+  .practice-grid { grid-template-columns: 1fr; gap: 28px; }
+  .practice-list, .plain-list { columns: 1; }
 }
 @media (max-width: 640px) {
   .col { padding: 0 24px; }
@@ -891,6 +978,11 @@ footer { padding: 88px 0 120px; }
   .footer-grid { grid-template-columns: 1fr; gap: 32px; }
   #hero { padding: 64px 0; }
   #profile, #brief-cta { padding: 56px 0; }
+  #practice, #courts, #experience,
+  #matters, #memberships { padding: 48px 0; }
+  /* Stacked rather than two-column — a 74px/132px gutter leaves too little
+     room for the entry itself at this width. */
+  .timeline li { grid-template-columns: 1fr; gap: 4px; }
   footer { padding: 56px 0 104px; }
   .brief-cta-row { flex-direction: column; align-items: flex-start; }
   .hero-foot { flex-direction: column; align-items: flex-start; gap: 24px; }
